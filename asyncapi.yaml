@@ -1,0 +1,202 @@
+asyncapi: "3.0.0"
+
+info:
+  title: EvilynAI SSE Events
+  version: "1.0.0"
+  description: |
+    Server-Sent Events pushed by the EvilynAI backend to connected clients.
+
+    The stream is available at `GET /api/stream`. Authentication is via Bearer
+    JWT in the `Authorization` header, or a `?token=` query parameter (required
+    for `EventSource`, which cannot set custom headers).
+
+    ## Wire format
+
+    Each event is a standard SSE message:
+
+    ```
+    event: <event_type>\n
+    data: <json_payload>\n
+    \n
+    ```
+
+    All payloads are JSON objects. Every payload includes a `timestamp` field
+    (ISO 8601, UTC). Keep-alive comments (`: keep-alive`) are sent every 5 s
+    when no events are pending.
+
+servers:
+  local:
+    host: localhost:5000
+    protocol: http
+    description: Local development server
+
+channels:
+  stream:
+    address: /api/stream
+    description: SSE stream endpoint. Connect once; events are pushed as they occur.
+    messages:
+      chat:
+        $ref: "#/components/messages/chat"
+      audio:
+        $ref: "#/components/messages/audio"
+      queue_update:
+        $ref: "#/components/messages/queue_update"
+      typing:
+        $ref: "#/components/messages/typing"
+      tool_action:
+        $ref: "#/components/messages/tool_action"
+      error:
+        $ref: "#/components/messages/error"
+
+operations:
+  receiveEvents:
+    action: receive
+    channel:
+      $ref: "#/channels/stream"
+    summary: Receive real-time events from EvilynAI
+    messages:
+      - $ref: "#/channels/stream/messages/chat"
+      - $ref: "#/channels/stream/messages/audio"
+      - $ref: "#/channels/stream/messages/queue_update"
+      - $ref: "#/channels/stream/messages/typing"
+      - $ref: "#/channels/stream/messages/tool_action"
+      - $ref: "#/channels/stream/messages/error"
+
+components:
+  schemas:
+    Timestamp:
+      type: string
+      format: date-time
+      description: ISO 8601 UTC timestamp
+      examples:
+        - "2026-03-11T12:00:00+00:00"
+
+  messages:
+    chat:
+      name: chat
+      title: Chat message
+      summary: Sent when a chat message is produced (assistant reply or echoed user message).
+      contentType: application/json
+      payload:
+        type: object
+        required: [role, content, timestamp]
+        properties:
+          role:
+            type: string
+            enum: [user, assistant, system]
+            description: The speaker role
+          content:
+            type: string
+            description: The text content of the message
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - role: assistant
+            content: "Hello! How can I help you?"
+            timestamp: "2026-03-11T12:00:00+00:00"
+
+    audio:
+      name: audio
+      title: Audio status
+      summary: Sent to notify the client about the status of a TTS audio clip.
+      contentType: application/json
+      payload:
+        type: object
+        required: [audio_id, status, timestamp]
+        properties:
+          audio_id:
+            type: string
+            description: Unique identifier for the audio clip
+          status:
+            type: string
+            enum: [processing, ready, error]
+            description: Current status of the audio clip
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - audio_id: abc123
+            status: ready
+            timestamp: "2026-03-11T12:00:01+00:00"
+
+    queue_update:
+      name: queue_update
+      title: Action queue update
+      summary: Sent when an action queue entry changes state.
+      contentType: application/json
+      payload:
+        type: object
+        required: [action_id, status, timestamp]
+        properties:
+          action_id:
+            type: string
+            description: Unique identifier for the queued action
+          status:
+            type: string
+            enum: [added, approved, denied, executed]
+            description: New status of the action
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - action_id: tool-42
+            status: approved
+            timestamp: "2026-03-11T12:00:02+00:00"
+
+    typing:
+      name: typing
+      title: Typing indicator
+      summary: Sent to indicate whether Evilyn is currently generating a response.
+      contentType: application/json
+      payload:
+        type: object
+        required: [is_typing, timestamp]
+        properties:
+          is_typing:
+            type: boolean
+            description: true while Evilyn is generating, false when done
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - is_typing: true
+            timestamp: "2026-03-11T12:00:00+00:00"
+
+    tool_action:
+      name: tool_action
+      title: Tool invocation
+      summary: Sent when Evilyn invokes a tool.
+      contentType: application/json
+      payload:
+        type: object
+        required: [tool_name, parameters, timestamp]
+        properties:
+          tool_name:
+            type: string
+            description: The name of the tool being invoked
+          parameters:
+            type: object
+            additionalProperties: true
+            description: Key/value parameters passed to the tool
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - tool_name: web_search
+            parameters:
+              query: "recent news"
+            timestamp: "2026-03-11T12:00:03+00:00"
+
+    error:
+      name: error
+      title: Error notification
+      summary: Sent when an error occurs that the client should be informed of.
+      contentType: application/json
+      payload:
+        type: object
+        required: [error_message, timestamp]
+        properties:
+          error_message:
+            type: string
+            description: Human-readable description of the error
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - error_message: "LLM provider timed out."
+            timestamp: "2026-03-11T12:00:05+00:00"

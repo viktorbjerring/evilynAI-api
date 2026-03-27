@@ -1,9 +1,8 @@
 get:
   summary: Get a tool's current runtime state
   description: |
-    Returns the tool's internal state as reported by `get_state()`. The
-    structure is tool-specific — tools that don't override `get_state()`
-    return an empty object.
+    Returns the tool's internal state as reported by `tool_state`.
+    This returns a tool-agnostic dictionary containing if the tool is enabled, and the tools description
 
     Example uses:
     - Scheduler: list of active scheduled jobs
@@ -32,8 +31,22 @@ get:
                 type: string
               state:
                 type: object
-                additionalProperties: true
-                description: Tool-specific state dictionary
+                description: Tool-specific state object
+                properties:
+                  enabled:
+                    type: boolean
+                    description: Whether the tool is enabled
+                  description:
+                    type: string
+                    description: Human-readable description of the tool
+                required:
+                  - enabled
+                additionalProperties: {} 
+          example:
+            tool: "scheduler"
+            state:
+              enabled: true
+              description: "Runs scheduled jobs"
     '401':
       description: Unauthorized
       content:

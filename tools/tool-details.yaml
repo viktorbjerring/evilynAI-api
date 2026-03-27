@@ -1,9 +1,14 @@
 get:
   summary: Get extended detail for a tool
   description: |
-    Returns the tool's metadata, actions with permissions, and user-callable
-    actions (those that bypass AI inference). Combines the data from
-    `GET /{tool_name}` and `GET /{tool_name}/user_action`.
+    Returns extended tool detail as reported by tool.details.
+    This returns a tool-specific dictionary of details,
+    and is intended to be used for tools to expose additional information about themselves for display in the UI or for other informational purposes.
+    This is primarily intended to be used for tools to expose additional information to show in UI, bypassing the AI.
+
+    Example:
+    - Scheduler: list of active scheduled jobs with their next run time
+    - Notebook: list of notes with their creation date and a short preview of their content
   tags: [tools]
   security:
     - bearerAuth: []

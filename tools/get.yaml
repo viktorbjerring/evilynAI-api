@@ -1,0 +1,70 @@
+get:
+  summary: Get full detail for a tool
+  description: |
+    Returns the tool's metadata, all its actions with their full JSON Schema
+    parameter definitions, and the effective permission for each action
+    (including any active overrides).
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "notebook"
+  responses:
+    '200':
+      description: Tool detail
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, enabled, actions]
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+                nullable: true
+              enabled:
+                type: boolean
+                nullable: true
+              actions:
+                type: array
+                items:
+                  type: object
+                  required: [name, description, permission, overridden]
+                  properties:
+                    name:
+                      type: string
+                      example: "notebook_write"
+                    description:
+                      type: string
+                    permission:
+                      type: string
+                      enum: [immediate, requires_approval, disabled]
+                      description: Effective permission (default or overridden)
+                    overridden:
+                      type: boolean
+                      description: True if the permission has been manually overridden
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Tool 'unknown_tool' not found"

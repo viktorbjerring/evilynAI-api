@@ -1,0 +1,24 @@
+get:
+  summary: Service health check
+  description: |
+    Returns the service status and availability of optional subsystems (TTS, STT).
+    No authentication required.
+  tags: [health]
+  responses:
+    '200':
+      description: Health status
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, tts, stt]
+            properties:
+              status:
+                type: string
+                example: "ok"
+              tts:
+                type: boolean
+                description: Whether the TTS engine is available
+              stt:
+                type: boolean
+                description: Whether STT (Whisper) is configured

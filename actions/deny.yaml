@@ -1,0 +1,60 @@
+post:
+  summary: Deny a pending action
+  description: |
+    Marks the action as denied and injects a system message into the AI,
+    triggering a new inference loop so the AI is aware the action was rejected.
+  tags: [actions]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: action_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Action denied and AI notified
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, action_id, response]
+            properties:
+              status:
+                type: string
+                example: "denied"
+              action_id:
+                type: string
+                format: uuid
+              response:
+                type: string
+                description: AI response to the denial notification
+    '400':
+      description: Action is not in pending state
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Action not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

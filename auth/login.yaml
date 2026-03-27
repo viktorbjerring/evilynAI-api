@@ -1,0 +1,58 @@
+post:
+  summary: Authenticate and receive a JWT
+  tags: [auth]
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [password]
+          properties:
+            password:
+              type: string
+              example: "hunter2"
+  responses:
+    '200':
+      description: Authentication successful
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [token, expires_in]
+            properties:
+              token:
+                type: string
+                description: HS256-signed JWT
+              expires_in:
+                type: integer
+                description: Token lifetime in seconds
+                example: 2592000
+    '400':
+      description: Request body missing
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Invalid password
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid credentials"
+    '500':
+      description: Authentication not configured
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

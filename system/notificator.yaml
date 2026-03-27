@@ -1,0 +1,57 @@
+post:
+  summary: Broadcast an FCM push notification
+  description: |
+    Broadcasts a push notification to all registered FCM devices. Used by
+    the toolset notificator module to surface alerts outside of the SSE stream.
+  tags: [system]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [title, message]
+          properties:
+            title:
+              type: string
+              description: Notification title
+              example: "Meeting Reminder"
+            message:
+              type: string
+              description: Notification body
+              example: "Your meeting starts in 10 minutes."
+  responses:
+    '200':
+      description: Notification sent
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, message]
+            properties:
+              status:
+                type: string
+                example: "ok"
+              message:
+                type: string
+                example: "Notification sent"
+    '400':
+      description: Missing title or message
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,54 @@
+get:
+  summary: Get details of a specific action
+  tags: [actions]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: action_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Action details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, tool_name, parameters, status, created_at]
+            properties:
+              id:
+                type: string
+                format: uuid
+              tool_name:
+                type: string
+              parameters:
+                type: object
+                additionalProperties: true
+              status:
+                type: string
+                enum: [pending, approved, denied, executed, expired, error]
+              created_at:
+                type: string
+                format: date-time
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Action not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Action not found"

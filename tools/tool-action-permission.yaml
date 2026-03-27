@@ -1,0 +1,138 @@
+post:
+  summary: Set a permission override for a specific action
+  description: |
+    Overrides the default permission for a named action on a tool. The
+    override is persisted to `permission_overrides.json` and takes effect
+    immediately.
+
+    Use the short action name (e.g. `write`, not `notebook-write`).
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "notebook"
+    - name: action_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "write"
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [permission]
+          properties:
+            permission:
+              type: string
+              enum: [immediate, requires_approval, disabled]
+              example: "immediate"
+  responses:
+    '200':
+      description: Override applied
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, tool, action, permission]
+            properties:
+              status:
+                type: string
+                example: "ok"
+              tool:
+                type: string
+              action:
+                type: string
+              permission:
+                type: string
+                enum: [immediate, requires_approval, disabled]
+    '400':
+      description: Invalid permission value
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool or action not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+delete:
+  summary: Reset an action's permission to its default
+  description: |
+    Removes any active override, restoring the action's built-in default
+    permission. If no override exists this is a no-op.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "notebook"
+    - name: action_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "write"
+  responses:
+    '200':
+      description: Override removed (or was not set)
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, tool, action]
+            properties:
+              status:
+                type: string
+                example: "ok"
+              tool:
+                type: string
+              action:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool or action not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

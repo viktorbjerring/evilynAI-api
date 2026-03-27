@@ -1,0 +1,140 @@
+get:
+  summary: List user-callable actions for a tool
+  description: |
+    Returns the actions that a user can invoke directly on this tool,
+    bypassing the AI inference loop entirely. Each action includes its name
+    and the parameter schema. Tools that don't implement user actions return
+    an empty list.
+
+    The available actions and their schemas are defined by each tool's
+    `get_user_action()` implementation. Examples:
+    - Scheduler: `delete_plan`, `pause_plan`
+    - Notebook: `delete_note`
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "scheduler"
+  responses:
+    '200':
+      description: Available user actions
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tool, actions]
+            properties:
+              tool:
+                type: string
+              actions:
+                type: array
+                items:
+                  type: object
+                  required: [name, parameters]
+                  properties:
+                    name:
+                      type: string
+                      example: "delete_plan"
+                    parameters:
+                      type: object
+                      description: JSON Schema for the action's parameters
+                      example:
+                        type: object
+                        properties:
+                          plan_id: {type: string}
+                        required: [plan_id]
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+post:
+  summary: Execute a user action on a tool directly
+  description: |
+    Invokes a user-defined action on the tool, bypassing AI inference and
+    the action queue. The tool handles the request directly via its
+    `do_user_action()` method.
+
+    The response structure is tool-defined — each tool returns its own dict.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "scheduler"
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              description: Name of the user action to execute
+              example: "delete_plan"
+            parameters:
+              type: object
+              additionalProperties: true
+              description: Action-specific parameters
+              example:
+                plan_id: "abc123"
+  responses:
+    '200':
+      description: Action result (tool-defined structure)
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: Missing action name
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

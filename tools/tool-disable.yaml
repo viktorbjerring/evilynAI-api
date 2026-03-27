@@ -1,0 +1,37 @@
+post:
+  summary: Disable an active tool
+  description: |
+    Disables a tool, removing it from the LLM's available tool definitions.
+    The tool remains inspectable via the API. The disabled state is persisted
+    and survives reloads. Use `POST /{tool_name}/enable` to re-enable.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "notebook"
+  responses:
+    '200':
+      description: Tool disabled
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, tool, enabled]
+            properties:
+              status:
+                type: string
+                example: "ok"
+              tool:
+                type: string
+              enabled:
+                type: boolean
+                example: false
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      $ref: '../openapi.yaml#/components/responses/NotFound'

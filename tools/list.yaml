@@ -1,0 +1,57 @@
+get:
+  summary: List all registered tools
+  description: |
+    Returns all tools loaded by the tool registry, including their actions,
+    default permissions, descriptions, and debug info.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Tool list
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tools]
+            properties:
+              tools:
+                type: array
+                items:
+                  type: object
+                  required: [name, description, enabled, actions]
+                  properties:
+                    name:
+                      type: string
+                      example: "notebook"
+                    description:
+                      type: string
+                    enabled:
+                      type: boolean
+                    actions:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: "notebook_write"
+                          action_name:
+                            type: string
+                          permission:
+                            type: string
+                            enum: [immediate, requires_approval, disabled]
+                          description:
+                            type: string
+                    debug_info:
+                      type: object
+                      additionalProperties: true
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

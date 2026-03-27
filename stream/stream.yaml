@@ -1,0 +1,42 @@
+get:
+  summary: Open SSE event stream
+  description: |
+    Opens a persistent Server-Sent Events connection. The server pushes events
+    as they occur. Keep-alive comments (`: keep-alive`) are sent every 5 seconds
+    to prevent proxy/browser timeouts.
+
+    **Authentication:** Accepts a Bearer token via `Authorization` header **or**
+    via `?token=` query parameter (required for browser `EventSource`).
+
+    Each SSE event has the form:
+    ```
+    event: <type>
+    data: <JSON payload>
+    ```
+  tags: [stream]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: token
+      in: query
+      required: false
+      schema:
+        type: string
+      description: JWT token (alternative to Authorization header, for EventSource)
+  responses:
+    '200':
+      description: SSE stream opened
+      content:
+        text/event-stream:
+          schema:
+            type: string
+            description: Stream of SSE events
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

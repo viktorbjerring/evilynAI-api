@@ -1,0 +1,42 @@
+get:
+  summary: Check TTS availability
+  tags: [tts]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: TTS status
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [available, expressions]
+            properties:
+              available:
+                type: boolean
+              expressions:
+                type: array
+                items:
+                  type: string
+                example: ["neutral"]
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '500':
+      description: TTS engine error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              available:
+                type: boolean
+                example: false
+              error:
+                type: string

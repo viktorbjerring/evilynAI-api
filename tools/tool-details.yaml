@@ -1,0 +1,49 @@
+get:
+  summary: Get extended detail for a tool
+  description: |
+    Returns the tool's metadata, actions with permissions, and user-callable
+    actions (those that bypass AI inference). Combines the data from
+    `GET /{tool_name}` and `GET /{tool_name}/user_action`.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "scheduler"
+  responses:
+    '200':
+      description: Extended tool detail
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tool, details]
+            properties:
+              tool:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+                description: Tool-defined details dictionary
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,28 @@
+get:
+  summary: Check if STT is available
+  description: |
+    Returns whether server-side speech-to-text is available. Availability
+    depends on `OPENAI_API_KEY` being configured.
+  tags: [stt]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: STT availability status
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [available]
+            properties:
+              available:
+                type: boolean
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,41 @@
+get:
+  summary: List all pending actions awaiting approval
+  tags: [actions]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: List of pending actions
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [actions]
+            properties:
+              actions:
+                type: array
+                items:
+                  type: object
+                  required: [id, tool_name, parameters, created_at]
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    tool_name:
+                      type: string
+                      example: "notebook_write"
+                    parameters:
+                      type: object
+                      additionalProperties: true
+                    created_at:
+                      type: string
+                      format: date-time
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

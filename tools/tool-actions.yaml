@@ -1,0 +1,62 @@
+get:
+  summary: List all actions for a tool with schemas and permissions
+  description: |
+    Returns each action's full parameter schema alongside its default and
+    effective permissions. Useful for building a UI for direct invocation
+    or understanding what the AI can call.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "notebook"
+  responses:
+    '200':
+      description: Action list
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tool, actions]
+            properties:
+              tool:
+                type: string
+              actions:
+                type: array
+                items:
+                  type: object
+                  required: [name, description, permission, overridden]
+                  properties:
+                    name:
+                      type: string
+                      example: "notebook-write"
+                    description:
+                      type: string
+                    permission:
+                      type: string
+                      enum: [immediate, requires_approval, disabled]
+                      description: Effective permission
+                    overridden:
+                      type: boolean
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

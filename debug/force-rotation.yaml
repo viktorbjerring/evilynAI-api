@@ -1,0 +1,46 @@
+post:
+  summary: Force a transcript rotation
+  description: |
+    Manually triggers the transcript rotation that normally fires when the
+    buffer is ~80% full. The oldest 50% of messages are summarized and moved
+    into the summaries window.
+
+    Returns an error if the transcript is empty.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Rotation completed
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, summaries_count, meta_summary]
+            properties:
+              status:
+                type: string
+                example: "rotated"
+              summaries_count:
+                type: integer
+              meta_summary:
+                type: string
+    '400':
+      description: Transcript is empty
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "No messages to rotate"
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

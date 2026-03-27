@@ -1,0 +1,54 @@
+post:
+  summary: Enable or disable TTS
+  tags: [tts]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [enabled]
+          properties:
+            enabled:
+              type: boolean
+              description: Set to true to enable TTS, false to disable
+  responses:
+    '200':
+      description: TTS state updated
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [enabled]
+            properties:
+              enabled:
+                type: boolean
+    '400':
+      description: Missing enabled field
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '503':
+      description: TTS engine not available
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

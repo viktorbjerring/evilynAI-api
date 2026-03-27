@@ -1,0 +1,46 @@
+get:
+  summary: Retrieve recent conversation messages
+  description: |
+    Returns messages from the current in-memory transcript in chronological
+    order. The transcript is a rolling buffer; messages older than the buffer
+    window are summarized and not returned here.
+  tags: [chat]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 50
+        minimum: 1
+      description: Maximum number of messages to return (most recent N)
+  responses:
+    '200':
+      description: Message list
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [messages]
+            properties:
+              messages:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    role:
+                      type: string
+                      enum: [user, assistant, system]
+                    content:
+                      type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

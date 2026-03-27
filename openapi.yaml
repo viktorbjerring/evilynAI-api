@@ -1,0 +1,176 @@
+openapi: "3.0.3"
+
+info:
+  title: EvilynAI API
+  version: "1.0.0"
+  description: |
+    REST API for the EvilynAI backend. All endpoints except `/health` and
+    `/login` require a Bearer JWT token obtained from `POST /api/login`.
+
+    The SSE stream endpoint (`GET /api/stream`) also accepts the token as a
+    `?token=` query parameter, because `EventSource` cannot set custom headers.
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: "Action not found"
+
+    ActionStatus:
+      type: string
+      enum: [pending, approved, denied, executed, expired, error]
+
+    ActionPermission:
+      type: string
+      enum: [immediate, requires_approval, disabled]
+
+    QueuedAction:
+      type: object
+      required: [id, tool_name, parameters, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tool_name:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ActionStatus'
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Missing token"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Invalid or missing request body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+paths:
+  # Auth
+  /login:
+    $ref: './auth/login.yaml'
+
+  # Chat
+  /chat:
+    $ref: './chat/chat.yaml'
+  /chat/history:
+    $ref: './chat/history.yaml'
+
+  # Actions
+  /actions/pending:
+    $ref: './actions/pending.yaml'
+  /actions/{action_id}:
+    $ref: './actions/get.yaml'
+  /actions/{action_id}/approve:
+    $ref: './actions/approve.yaml'
+  /actions/{action_id}/deny:
+    $ref: './actions/deny.yaml'
+
+  # Tools
+  /tools:
+    $ref: './tools/list.yaml'
+  /tools/reload:
+    $ref: './tools/reload.yaml'
+  /tools/{tool_name}/enable:
+    $ref: './tools/tool-enable.yaml'
+  /tools/{tool_name}/disable:
+    $ref: './tools/tool-disable.yaml'
+  /tools/{tool_name}:
+    $ref: './tools/get.yaml'
+  /tools/{tool_name}/actions:
+    $ref: './tools/tool-actions.yaml'
+  /tools/{tool_name}/current_state:
+    $ref: './tools/tool-current-state.yaml'
+  /tools/{tool_name}/details:
+    $ref: './tools/tool-details.yaml'
+  /tools/{tool_name}/user_action:
+    $ref: './tools/tool-user-action.yaml'
+  /tools/{tool_name}/{action_name}/permission:
+    $ref: './tools/tool-action-permission.yaml'
+
+  # TTS
+  /tts/available:
+    $ref: './tts/available.yaml'
+  /tts/enable:
+    $ref: './tts/enable.yaml'
+  /tts/fetch/{response_id}:
+    $ref: './tts/fetch.yaml'
+
+  # STT
+  /stt/available:
+    $ref: './stt/available.yaml'
+
+  # Stream
+  /stream:
+    $ref: './stream/stream.yaml'
+  /device/register:
+    $ref: './stream/device-register.yaml'
+
+  # Debug
+  /debug/transcript:
+    $ref: './debug/transcript.yaml'
+  /debug/summaries:
+    $ref: './debug/summaries.yaml'
+  /debug/personality:
+    $ref: './debug/personality.yaml'
+  /debug/trait:
+    $ref: './debug/trait.yaml'
+  /debug/force-rotation:
+    $ref: './debug/force-rotation.yaml'
+  /debug/force-extraction:
+    $ref: './debug/force-extraction.yaml'
+
+  # System
+  /system/ping:
+    $ref: './system/ping.yaml'
+  /system/notificator:
+    $ref: './system/notificator.yaml'
+  /system/message:
+    $ref: './system/message.yaml'
+
+  # Health
+  /health:
+    $ref: './health/health.yaml'
+  /logs/{source_name}:
+    $ref: './health/logs.yaml'
+
+  # Google OAuth
+  /auth/google/{tool_name}:
+    $ref: './google-auth/start.yaml'
+  /auth/google/{tool_name}/callback:
+    $ref: './google-auth/callback.yaml'

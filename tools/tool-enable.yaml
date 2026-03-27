@@ -1,0 +1,45 @@
+post:
+  summary: Enable a disabled tool
+  description: |
+    Re-enables a tool that was previously manually disabled. Returns a 409
+    if the tool was disabled due to a setup failure — use `POST /reload`
+    to retry setup instead.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "notebook"
+  responses:
+    '200':
+      description: Tool enabled
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, tool, enabled]
+            properties:
+              status:
+                type: string
+                example: "ok"
+              tool:
+                type: string
+              enabled:
+                type: boolean
+                example: true
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      $ref: '../openapi.yaml#/components/responses/NotFound'
+    '409':
+      description: Tool cannot be re-enabled without a reload (setup failed)
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'
+          example:
+            error: "Tool 'notebook' failed during setup and cannot be re-enabled without a reload()."

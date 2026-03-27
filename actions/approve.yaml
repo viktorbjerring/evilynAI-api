@@ -1,0 +1,64 @@
+post:
+  summary: Approve a pending action
+  description: |
+    Marks the action as approved and injects a system message into the AI,
+    triggering a new inference loop. The AI is then expected to call the
+    internal `execute_approved` tool to run the action.
+
+    Returns the AI's response to the approval notification.
+  tags: [actions]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: action_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Action approved and AI notified
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, action_id, response]
+            properties:
+              status:
+                type: string
+                example: "approved"
+              action_id:
+                type: string
+                format: uuid
+              response:
+                type: string
+                description: AI response to the approval notification
+    '400':
+      description: Action is not in pending state
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Action is not pending (status: approved)"
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Action not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

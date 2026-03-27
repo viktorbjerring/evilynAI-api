@@ -1,0 +1,89 @@
+post:
+  summary: Send a message and receive an AI response
+  description: |
+    Accepts either JSON (text) or multipart/form-data (audio).
+
+    **Text input:** send `Content-Type: application/json` with a `message` field.
+
+    **Audio input:** send `Content-Type: multipart/form-data` with an `audio` file.
+    The file is transcribed server-side via OpenAI Whisper. The transcription is
+    returned in `input_transcription`.
+
+    The response may include `audio_url` — a TTS response ID. Fetch the audio
+    from `GET /api/tts/fetch/{audio_url}`.
+  tags: [chat]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [message]
+          properties:
+            message:
+              type: string
+              example: "Hey, how are you?"
+      multipart/form-data:
+        schema:
+          type: object
+          required: [audio]
+          properties:
+            audio:
+              type: string
+              format: binary
+              description: Audio file (webm recommended)
+  responses:
+    '200':
+      description: AI response
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [response, timestamp]
+            properties:
+              response:
+                type: string
+                description: AI text response
+              timestamp:
+                type: string
+                format: date-time
+              input_transcription:
+                type: string
+                nullable: true
+                description: Whisper transcription (only present for audio input)
+              audio_url:
+                type: string
+                nullable: true
+                description: TTS response ID — fetch audio from GET /tts/fetch/{audio_url}
+              metadata:
+                type: object
+                additionalProperties: true
+    '400':
+      description: Missing or empty message
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '500':
+      description: Internal error during message processing
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,66 @@
+post:
+  summary: Register an FCM device token
+  description: |
+    Registers a Firebase Cloud Messaging token for push notification fallback.
+    When no SSE client is connected, certain events are delivered via FCM to
+    all registered devices.
+
+    Tokens are persisted to `fcm_devices.json`. Stale tokens are pruned
+    automatically after failed delivery attempts.
+  tags: [stream]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: token
+      in: query
+      required: false
+      schema:
+        type: string
+      description: JWT token (alternative to Authorization header)
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [fcm_token, platform]
+          properties:
+            fcm_token:
+              type: string
+              description: FCM registration token from the client SDK
+            platform:
+              type: string
+              enum: [android, ios, web]
+              description: Device platform
+  responses:
+    '200':
+      description: Device registered
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, platform]
+            properties:
+              status:
+                type: string
+                example: "ok"
+              platform:
+                type: string
+    '400':
+      description: Missing or invalid fields
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

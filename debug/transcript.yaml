@@ -1,0 +1,42 @@
+get:
+  summary: View current transcript buffer
+  description: |
+    Returns the in-memory transcript with token usage info and whether a
+    rotation is due. Rotation happens when the buffer reaches ~80% of the token
+    budget; the oldest 50% is summarized.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Transcript state
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [messages, token_count, should_rotate]
+            properties:
+              messages:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    role:
+                      type: string
+                      enum: [user, assistant, system]
+                    content:
+                      type: string
+              token_count:
+                type: string
+                description: Token usage summary (e.g. "1200 / 3500")
+              should_rotate:
+                type: boolean
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

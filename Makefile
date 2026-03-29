@@ -1,4 +1,4 @@
-OPENAPI   := openapi.yaml
+OPENAPI   := server-api/openapi.yaml
 ASYNCAPI  := asyncapi.yaml
 
 .PHONY: docs docs-bundle docs-asyncapi help

@@ -1,0 +1,19 @@
+tasks-tool:
+  tool_state:
+    - type: object
+      properties:
+        enabled:
+          type: boolean
+        description:
+          type: string
+        backend:
+          type: string
+          enum: [local, google]
+  
+  user_actions:
+    - name: setup_oauth
+      parameters: {}
+      description: "Run the Google OAuth flow and save the token to disk."
+
+  details:
+    {}

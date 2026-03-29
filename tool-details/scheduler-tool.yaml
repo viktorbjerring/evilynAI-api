@@ -1,0 +1,28 @@
+scheduler-tool:
+  tool_state:
+    - type: object
+      properties:
+        enabled:
+          type: boolean
+        description:
+          type: string
+        num_active_schedules:
+          type: integer
+        active_schedule_ids:
+          type: array
+          items:
+            type: string
+
+  user_actions:
+    - name: disable
+      parameters:
+        schedule_id:
+          description: "The ID of the scheduled action to disable"
+      description: "Remove a scheduled action by ID."
+    - name: trigger
+      parameters:
+        schedule_id:
+          description: "The ID of the scheduled action to fire immediately, bypassing its scheduled time"
+      description: "Fire a scheduled action immediately."
+
+  details: {}

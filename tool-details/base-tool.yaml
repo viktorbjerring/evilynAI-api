@@ -1,0 +1,12 @@
+base-tool:
+  tool_state:
+    - type: object
+      properties:
+        enabled:
+          type: boolean
+        description:
+          type: string
+
+  user_actions: []
+
+  details: {}

@@ -1,0 +1,169 @@
+get:
+  summary: List user-callable actions for a tool
+  description: |
+    Returns the actions that a user can invoke directly on this tool,
+    bypassing the AI inference loop entirely. Each action includes its name
+    and the parameters it accepts. Tools that don't implement user actions
+    return an empty list.
+
+    User actions are defined per-tool via the `user_actions` property.
+    Currently implemented actions:
+
+    **tasks**
+    - `setup_oauth` — Run the Google OAuth flow and save the token to disk.
+      No parameters required.
+
+    **scheduler**
+    - `disable` — Remove a scheduled action by ID.
+      Parameters: `schedule_id` (string)
+    - `trigger` — Fire a scheduled action immediately, bypassing its
+      scheduled time. Parameters: `schedule_id` (string)
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "scheduler"
+  responses:
+    '200':
+      description: Available user actions
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tool, actions]
+            properties:
+              tool:
+                type: string
+              actions:
+                type: array
+                items:
+                  type: object
+                  required: [name, parameters]
+                  properties:
+                    name:
+                      type: string
+                      example: "trigger"
+                    parameters:
+                      type: object
+                      description: |
+                        Key/value map of parameter definitions for the action.
+                        Each key is a parameter name; the value is an object
+                        with at least a `description` field.
+                      example:
+                        schedule_id:
+                          description: "The ID of the scheduled action to fire immediately"
+          examples:
+            scheduler:
+              summary: Scheduler tool actions
+              value:
+                tool: scheduler
+                actions:
+                  - name: disable
+                    parameters:
+                      schedule_id:
+                        description: "The ID of the scheduled action to disable"
+                  - name: trigger
+                    parameters:
+                      schedule_id:
+                        description: "The ID of the scheduled action to fire immediately, bypassing its scheduled time"
+            tasks:
+              summary: Tasks tool actions
+              value:
+                tool: tasks
+                actions:
+                  - name: setup_oauth
+                    parameters: {}
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      $ref: '../openapi.yaml#/components/responses/NotFound'
+
+post:
+  summary: Execute a user action on a tool directly
+  description: |
+    Invokes a user-defined action on the tool, bypassing AI inference and
+    the action queue.
+
+    Currently implemented actions:
+
+    **tasks / setup_oauth** — Runs the Google OAuth flow and saves the
+    resulting token to disk. No parameters required.
+
+    **scheduler / disable** — Removes a scheduled action.
+    Required parameter: `schedule_id` (string).
+
+    **scheduler / trigger** — Fires a scheduled action immediately,
+    bypassing its scheduled time.
+    Required parameter: `schedule_id` (string).
+
+    The response is a plain string message returned by the action.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "scheduler"
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              description: Name of the user action to execute
+              example: "trigger"
+            parameters:
+              type: object
+              additionalProperties: true
+              description: Action-specific parameters
+              example:
+                schedule_id: "abc123"
+        examples:
+          trigger:
+            summary: Trigger a scheduled action immediately
+            value:
+              action: trigger
+              parameters:
+                schedule_id: "abc123"
+          disable:
+            summary: Disable a scheduled action
+            value:
+              action: disable
+              parameters:
+                schedule_id: "abc123"
+          setup_oauth:
+            summary: Run Google OAuth setup for the tasks tool
+            value:
+              action: setup_oauth
+              parameters: {}
+  responses:
+    '200':
+      description: Action result message
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [result]
+            properties:
+              result:
+                type: string
+                description: Human-readable result message from the action
+                example: "Scheduled action abc123 fired immediately."
+    '400':
+      $ref: '../openapi.yaml#/components/responses/BadRequest'
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      $ref: '../openapi.yaml#/components/responses/NotFound'

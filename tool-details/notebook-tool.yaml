@@ -1,0 +1,28 @@
+notebook-tool:
+  tool_state:
+    - type: object
+      properties:
+        enabled:
+          type: boolean
+        description:
+          type: string
+        num_notes:
+          type: integer
+
+  user_actions: []
+
+  details:
+    - type: object
+      properties:
+        notes:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              content:
+                type: string
+              timestamp:
+                type: string
+                format: date-time

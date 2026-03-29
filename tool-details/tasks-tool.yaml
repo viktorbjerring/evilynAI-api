@@ -11,7 +11,7 @@ tasks-tool:
           enum: [local, google]
   
   user_actions:
-    - name: setup_oauth
+    - name: user_setup_oauth
       parameters: {}
       description: "Run the Google OAuth flow and save the token to disk."
 

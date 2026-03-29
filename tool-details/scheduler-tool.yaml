@@ -14,12 +14,12 @@ scheduler-tool:
             type: string
 
   user_actions:
-    - name: disable
+    - name: user_disable
       parameters:
         schedule_id:
           description: "The ID of the scheduled action to disable"
       description: "Remove a scheduled action by ID."
-    - name: trigger
+    - name: user_trigger
       parameters:
         schedule_id:
           description: "The ID of the scheduled action to fire immediately, bypassing its scheduled time"

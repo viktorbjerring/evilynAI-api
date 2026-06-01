@@ -32,9 +32,14 @@ get:
                   properties:
                     role:
                       type: string
-                      enum: [user, assistant, system]
+                      enum: [user, assistant, system, tool_call, tool_result]
+                      description: Clients should tolerate and ignore tool_call/tool_result roles
                     content:
                       type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+                      nullable: true
     '401':
       description: Unauthorized
       content:

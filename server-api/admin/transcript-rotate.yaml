@@ -1,0 +1,23 @@
+post:
+  summary: Trigger transcript rotation
+  description: |
+    Posts a `SummarizeTrigger` to the internal bus and returns immediately.
+    The rotation (summarising the oldest messages) runs asynchronously.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Trigger queued
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [queued]
+                example: "queued"
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'

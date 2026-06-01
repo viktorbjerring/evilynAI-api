@@ -1,9 +1,8 @@
 get:
   summary: View current transcript buffer
   description: |
-    Returns the in-memory transcript with token usage info and whether a
-    rotation is due. Rotation happens when the buffer reaches ~80% of the token
-    budget; the oldest 50% is summarized.
+    Returns the in-memory short-term transcript. Each entry includes all
+    roles recorded by the inference engine, including tool turns.
   tags: [debug]
   security:
     - bearerAuth: []
@@ -14,23 +13,26 @@ get:
         application/json:
           schema:
             type: object
-            required: [messages, token_count, should_rotate]
+            required: [messages]
             properties:
               messages:
                 type: array
                 items:
                   type: object
+                  required: [role, content]
                   properties:
                     role:
                       type: string
-                      enum: [user, assistant, system]
+                      enum: [user, assistant, system, tool_call, tool_result]
                     content:
                       type: string
-              token_count:
-                type: string
-                description: Token usage summary (e.g. "1200 / 3500")
-              should_rotate:
-                type: boolean
+                    timestamp:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    feedback_flag:
+                      type: boolean
+                      nullable: true
     '401':
       description: Unauthorized
       content:

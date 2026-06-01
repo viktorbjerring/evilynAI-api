@@ -1,0 +1,24 @@
+post:
+  summary: Trigger nightly dream pipeline
+  description: |
+    Posts a `DreamTrigger` to the internal bus and returns immediately.
+    The pipeline (LTM extraction + personality extraction + normalisation)
+    runs asynchronously. Poll `GET /api/debug/dream/status` for the outcome.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Trigger queued
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [queued]
+                example: "queued"
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'

@@ -141,19 +141,27 @@ paths:
   /device/register:
     $ref: './stream/device-register.yaml'
 
+  # Admin
+  /admin/dream/trigger:
+    $ref: './admin/dream-trigger.yaml'
+  /admin/transcript/rotate:
+    $ref: './admin/transcript-rotate.yaml'
+
   # Debug
   /debug/transcript:
     $ref: './debug/transcript.yaml'
+  /debug/working-set:
+    $ref: './debug/working-set.yaml'
+  /debug/dream/status:
+    $ref: './debug/dream-status.yaml'
+  /debug/scheduler/status:
+    $ref: './debug/scheduler-status.yaml'
   /debug/summaries:
     $ref: './debug/summaries.yaml'
   /debug/personality:
     $ref: './debug/personality.yaml'
   /debug/trait:
     $ref: './debug/trait.yaml'
-  /debug/force-rotation:
-    $ref: './debug/force-rotation.yaml'
-  /debug/force-extraction:
-    $ref: './debug/force-extraction.yaml'
 
   # System
   /system/ping:

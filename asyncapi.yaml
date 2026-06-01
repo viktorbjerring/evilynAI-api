@@ -43,8 +43,10 @@ channels:
         $ref: "#/components/messages/queue_update"
       typing:
         $ref: "#/components/messages/typing"
-      tool_action:
-        $ref: "#/components/messages/tool_action"
+      tool_call:
+        $ref: "#/components/messages/tool_call"
+      tool_result:
+        $ref: "#/components/messages/tool_result"
       error:
         $ref: "#/components/messages/error"
 
@@ -59,7 +61,8 @@ operations:
       - $ref: "#/channels/stream/messages/audio"
       - $ref: "#/channels/stream/messages/queue_update"
       - $ref: "#/channels/stream/messages/typing"
-      - $ref: "#/channels/stream/messages/tool_action"
+      - $ref: "#/channels/stream/messages/tool_call"
+      - $ref: "#/channels/stream/messages/tool_result"
       - $ref: "#/channels/stream/messages/error"
 
 components:
@@ -88,11 +91,15 @@ components:
           content:
             type: string
             description: The text content of the message
+          forced_notification:
+            type: boolean
+            description: True if this message should also trigger an FCM push notification
           timestamp:
             $ref: "#/components/schemas/Timestamp"
         examples:
           - role: assistant
             content: "Hello! How can I help you?"
+            forced_notification: false
             timestamp: "2026-03-11T12:00:00+00:00"
 
     audio:
@@ -109,7 +116,7 @@ components:
             description: Unique identifier for the audio clip
           status:
             type: string
-            enum: [processing, ready, error]
+            enum: [generating, ready, error]
             description: Current status of the audio clip
           timestamp:
             $ref: "#/components/schemas/Timestamp"
@@ -121,24 +128,25 @@ components:
     queue_update:
       name: queue_update
       title: Action queue update
-      summary: Sent when an action queue entry changes state.
+      summary: Sent when an action requiring approval is added to or removed from the queue.
       contentType: application/json
       payload:
         type: object
-        required: [action_id, status, timestamp]
+        required: [tool, parameters, timestamp]
         properties:
-          action_id:
+          tool:
             type: string
-            description: Unique identifier for the queued action
-          status:
-            type: string
-            enum: [added, approved, denied, executed]
-            description: New status of the action
+            description: Name of the tool that queued the action
+          parameters:
+            type: object
+            additionalProperties: true
+            description: Parameters of the queued action
           timestamp:
             $ref: "#/components/schemas/Timestamp"
         examples:
-          - action_id: tool-42
-            status: approved
+          - tool: tasks
+            parameters:
+              title: "Buy groceries"
             timestamp: "2026-03-11T12:00:02+00:00"
 
     typing:
@@ -159,18 +167,18 @@ components:
           - is_typing: true
             timestamp: "2026-03-11T12:00:00+00:00"
 
-    tool_action:
-      name: tool_action
-      title: Tool invocation
-      summary: Sent when Evilyn invokes a tool.
+    tool_call:
+      name: tool_call
+      title: Tool call
+      summary: Sent when Evilyn invokes a tool during inference.
       contentType: application/json
       payload:
         type: object
-        required: [tool_name, parameters, timestamp]
+        required: [tool, parameters, timestamp]
         properties:
-          tool_name:
+          tool:
             type: string
-            description: The name of the tool being invoked
+            description: Name of the tool being invoked
           parameters:
             type: object
             additionalProperties: true
@@ -178,10 +186,34 @@ components:
           timestamp:
             $ref: "#/components/schemas/Timestamp"
         examples:
-          - tool_name: web_search
+          - tool: web_search
             parameters:
               query: "recent news"
             timestamp: "2026-03-11T12:00:03+00:00"
+
+    tool_result:
+      name: tool_result
+      title: Tool result
+      summary: Sent with the result after a tool call completes.
+      contentType: application/json
+      payload:
+        type: object
+        required: [tool, result, timestamp]
+        properties:
+          tool:
+            type: string
+            description: Name of the tool that was invoked
+          result:
+            description: The value returned by the tool (type depends on the tool)
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - tool: web_search
+            result:
+              items:
+                - title: "Latest news"
+                  url: "https://example.com"
+            timestamp: "2026-03-11T12:00:04+00:00"
 
     error:
       name: error
@@ -190,13 +222,23 @@ components:
       contentType: application/json
       payload:
         type: object
-        required: [error_message, timestamp]
+        required: [code, message, timestamp]
         properties:
-          error_message:
+          code:
+            type: string
+            description: Machine-readable error code
+          message:
             type: string
             description: Human-readable description of the error
+          context:
+            type: object
+            nullable: true
+            additionalProperties: true
+            description: Optional structured context for the error
           timestamp:
             $ref: "#/components/schemas/Timestamp"
         examples:
-          - error_message: "LLM provider timed out."
+          - code: "llm_timeout"
+            message: "LLM provider timed out."
+            context: null
             timestamp: "2026-03-11T12:00:05+00:00"

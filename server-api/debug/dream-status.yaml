@@ -1,0 +1,28 @@
+get:
+  summary: Get dream pipeline last-run status
+  description: |
+    Returns the outcome of the most recent dream pipeline execution.
+    `last_status` is `"never"` if the pipeline has never run.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Dream status
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [last_status]
+            properties:
+              last_run:
+                type: string
+                format: date-time
+                nullable: true
+                description: ISO timestamp of the last completed run, or null if never run
+              last_status:
+                type: string
+                enum: [never, no_work, ok]
+                description: Outcome of the last run
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'

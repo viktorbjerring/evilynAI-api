@@ -13,19 +13,20 @@ This repo contains the OpenAPI and AsyncAPI specifications for the EvilynAI REST
 
 ### REST endpoint groups (`server-api/`)
 
-| Folder         | Endpoints                                                                   |
-| -------------- | --------------------------------------------------------------------------- |
-| `auth/`        | Login                                                                       |
-| `chat/`        | Chat, history                                                               |
-| `actions/`     | Pending, get, approve, deny                                                 |
-| `tools/`       | List, get, enable/disable, reload, actions, permissions, state              |
-| `tts/`         | Available, enable, fetch audio                                              |
-| `stt/`         | Available                                                                   |
-| `stream/`      | SSE stream, device register                                                 |
-| `debug/`       | Transcript, summaries, personality, trait, force-rotation, force-extraction |
-| `health/`      | Health check, logs                                                          |
-| `google-auth/` | Google OAuth start, callback                                                |
-| `system/`      | Ping, notificator, message                                                  |
+| Folder         | Endpoints                                                                              |
+| -------------- | -------------------------------------------------------------------------------------- |
+| `auth/`        | Login                                                                                  |
+| `chat/`        | Chat, history                                                                          |
+| `actions/`     | Pending, get, approve, deny                                                            |
+| `tools/`       | List, get, enable/disable, reload, actions, permissions, state                         |
+| `tts/`         | Available, enable, fetch audio                                                         |
+| `stt/`         | Available                                                                              |
+| `stream/`      | SSE stream, device register                                                            |
+| `admin/`       | Dream trigger, transcript rotate                                                       |
+| `debug/`       | Transcript, working-set, dream status, scheduler status, summaries, personality, trait |
+| `health/`      | Health check, logs                                                                     |
+| `google-auth/` | Google OAuth start, callback                                                           |
+| `system/`      | Ping, notificator, message                                                             |
 
 ## Tool schemas (`tool-details/`)
 
@@ -41,7 +42,6 @@ includes by default.
 | `notebook-tool.yaml`       | `notebook`          |
 | `scheduler-tool.yaml`      | `schedule`          |
 | `tasks-tool.yaml`          | `tasks`             |
-| `time-tool.yaml`           | `time`              |
 | `ask-the-oracle-tool.yaml` | `ask_the_oracle`    |
 
 ## Generating docs

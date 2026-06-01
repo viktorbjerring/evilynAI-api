@@ -1,0 +1,45 @@
+get:
+  summary: Get nightly scheduler status
+  description: |
+    Returns the current state of the server-side nightly scheduler that fires
+    the dream pipeline. Degrades to `{ enabled: false, running: false,
+    schedule: null }` when no scheduler is wired.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Scheduler status
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [enabled, running]
+            properties:
+              enabled:
+                type: boolean
+              running:
+                type: boolean
+                description: True if the scheduler thread is alive
+              in_flight:
+                type: boolean
+                description: True if a run is currently executing
+              schedule:
+                type: string
+                nullable: true
+                description: Configured daily run time as HH:MM, e.g. "03:00"
+              next_run:
+                type: string
+                format: date-time
+                nullable: true
+              last_run:
+                type: string
+                format: date-time
+                nullable: true
+              last_result:
+                type: object
+                nullable: true
+                additionalProperties: true
+                description: Result dict from the last run (shape depends on pipeline outcome)
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'

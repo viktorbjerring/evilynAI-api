@@ -1,9 +1,10 @@
 post:
-  summary: Broadcast an FCM push notification
+  summary: Register an FCM device token
   description: |
-    Broadcasts a push notification to all registered FCM devices. Used by
-    the toolset notificator module to surface alerts outside of the SSE stream.
-  tags: [system]
+    Registers a Firebase Cloud Messaging token for push notification fallback.
+    When no SSE client is connected, certain events are delivered via FCM to
+    all registered devices.
+  tags: [notifications]
   security:
     - bearerAuth: []
   requestBody:
@@ -12,33 +13,31 @@ post:
       application/json:
         schema:
           type: object
-          required: [title, message]
+          required: [fcm_token, platform]
           properties:
-            title:
+            fcm_token:
               type: string
-              description: Notification title
-              example: "Meeting Reminder"
-            message:
+              description: FCM registration token from the client SDK
+            platform:
               type: string
-              description: Notification body
-              example: "Your meeting starts in 10 minutes."
+              enum: [android, ios, web]
+              description: Device platform
   responses:
     '200':
-      description: Notification sent
+      description: Device registered
       content:
         application/json:
           schema:
             type: object
-            required: [status, message]
+            required: [status, platform]
             properties:
               status:
                 type: string
                 example: "ok"
-              message:
+              platform:
                 type: string
-                example: "Notification sent"
     '400':
-      description: Missing title or message
+      description: Missing or invalid fields
       content:
         application/json:
           schema:

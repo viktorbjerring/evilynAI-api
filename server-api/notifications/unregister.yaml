@@ -1,0 +1,64 @@
+delete:
+  summary: Unregister an FCM device token
+  description: |
+    Removes a Firebase Cloud Messaging token from the registry so the device
+    no longer receives push-notification fallbacks. The token may be supplied
+    in the JSON body or as a `?fcm_token=` query parameter.
+  tags: [notifications]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: fcm_token
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Token to remove (alternative to the JSON body)
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            fcm_token:
+              type: string
+  responses:
+    '200':
+      description: Token removed
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                example: "ok"
+    '400':
+      description: Missing fcm_token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Token not registered
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

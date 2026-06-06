@@ -70,7 +70,7 @@ post:
   description: |
     Module admin route proxied to the `tasks` tool. Creates a task in the
     given list (defaults to the primary list). While offline the write is
-    queued locally for replay (see `/tools/tasks/module/status`).
+    queued locally for replay (see `/tools/tasks/module/` for queue depth).
   tags: [module-admin]
   security:
     - bearerAuth: []

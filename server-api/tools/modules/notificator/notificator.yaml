@@ -1,0 +1,12 @@
+# notificator module — paths fragment.
+#
+# Maps each URL suffix (relative to `/tools/notificator/module/`) to its
+# PathItem file. The build step (`make build-tools-module`) collects every
+# `<module>.yaml` here and emits the top-level `tools-module.yaml` that
+# `openapi.yaml` references.
+#
+# To add an endpoint: drop a new PathItem file alongside, then add a
+# `<suffix>: { $ref: ./<file>.yaml }` entry below.
+
+'':
+  $ref: './notificator-details.yaml'

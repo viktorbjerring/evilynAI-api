@@ -210,3 +210,4 @@ __marimo__/
 openapi.html
 openapi.bundled.yaml
 asyncapi-docs/
+server-api/tools/tools-module.yaml

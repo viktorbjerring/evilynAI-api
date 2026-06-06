@@ -115,21 +115,10 @@ paths:
 
   # Module admin (proxied per-tool under /tools/{tool}/module).
   # Each module defines its own routes; the server proxies them and enforces
-  # auth. Concrete routes for the stateful modules are documented below.
-  /tools/schedule/module/schedules:
-    $ref: './tools/module/schedule-schedules.yaml'
-  /tools/schedule/module/schedules/{schedule_id}:
-    $ref: './tools/module/schedule-schedule.yaml'
-  /tools/schedule/module/schedules/{schedule_id}/trigger:
-    $ref: './tools/module/schedule-trigger.yaml'
-  /tools/tasks/module/status:
-    $ref: './tools/module/tasks-status.yaml'
-  /tools/tasks/module/lists:
-    $ref: './tools/module/tasks-lists.yaml'
-  /tools/tasks/module/tasks:
-    $ref: './tools/module/tasks-tasks.yaml'
-  /tools/tasks/module/tasks/{task_id}:
-    $ref: './tools/module/tasks-task.yaml'
+  # auth. The sibling $ref below merges in every module's paths from the
+  # generated aggregator (built by `make build-tools-module` from each
+  # `tools/modules/<m>/<m>.yaml`).
+  $ref: './tools/tools-module.yaml'
 
   # TTS
   /tts/available:

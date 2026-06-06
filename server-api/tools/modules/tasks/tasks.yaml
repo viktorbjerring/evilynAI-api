@@ -1,0 +1,18 @@
+# tasks module — paths fragment.
+#
+# Maps each URL suffix (relative to `/tools/tasks/module/`) to its
+# PathItem file. The build step (`make build-tools-module`) collects every
+# `<module>.yaml` here and emits the top-level `tools-module.yaml` that
+# `openapi.yaml` references.
+#
+# To add an endpoint: drop a new PathItem file alongside, then add a
+# `<suffix>: { $ref: ./<file>.yaml }` entry below.
+
+'':
+  $ref: './tasks-details.yaml'
+lists:
+  $ref: './tasks-lists.yaml'
+tasks:
+  $ref: './tasks-tasks.yaml'
+'tasks/{task_id}':
+  $ref: './tasks-task.yaml'

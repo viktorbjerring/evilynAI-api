@@ -1,0 +1,39 @@
+get:
+  summary: notebook module details
+  description: |
+    Module root for the `notebook` module. Returns the module name plus the
+    current note count and the set of category labels assigned across notes.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: notebook
+              details:
+                type: object
+                required: [num_notes, categories]
+                properties:
+                  num_notes:
+                    type: integer
+                  categories:
+                    type: array
+                    items:
+                      type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

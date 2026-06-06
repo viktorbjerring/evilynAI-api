@@ -1,0 +1,32 @@
+get:
+  summary: notificator module details
+  description: |
+    Module root for the `notificator` module. The notificator is stateless —
+    it only posts NotificationTriggers to the bus — so the details payload is
+    an empty object.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: notificator
+              details:
+                type: object
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

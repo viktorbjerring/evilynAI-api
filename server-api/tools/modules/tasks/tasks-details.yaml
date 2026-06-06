@@ -1,0 +1,41 @@
+get:
+  summary: tasks module details
+  description: |
+    Module root for the `tasks` module. Reports the hybrid backend's
+    runtime state: whether a Google OAuth token is present, and the depth
+    of the local write queue (pending operations awaiting replay against
+    the online backend).
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: tasks
+              details:
+                type: object
+                required: [authenticated, pending_operations]
+                properties:
+                  authenticated:
+                    type: boolean
+                    description: True if a Google OAuth token is present on disk.
+                  pending_operations:
+                    type: integer
+                    description: Number of offline-queued writes awaiting replay.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

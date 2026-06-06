@@ -1,0 +1,41 @@
+get:
+  summary: ask-the-oracle module details
+  description: |
+    Module root for the `ask-the-oracle` (AI consultant) module. Returns the
+    module name and runtime configuration: the Anthropic model, the token
+    cap per call, and the per-query agentic loop turn cap.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: ask_the_oracle
+              details:
+                type: object
+                required: [model, max_tokens, max_turns]
+                properties:
+                  model:
+                    type: string
+                    example: claude-opus-4-7
+                  max_tokens:
+                    type: integer
+                  max_turns:
+                    type: integer
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

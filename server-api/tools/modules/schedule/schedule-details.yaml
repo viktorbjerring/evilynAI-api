@@ -1,0 +1,38 @@
+get:
+  summary: schedule module details
+  description: |
+    Module root for the `schedule` module. Returns the configured user
+    timezone (IANA name) and the number of currently active schedules.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: schedule
+              details:
+                type: object
+                required: [timezone, active_schedules]
+                properties:
+                  timezone:
+                    type: string
+                    example: Europe/Copenhagen
+                  active_schedules:
+                    type: integer
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -80,88 +80,10 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
+# The paths map is generated from the server-api/ folder tree by
+# scripts/build_api_docs.py (run via `make build-api-docs`). Each `.yaml`
+# file's location is its URL: `a/b/c.yaml` -> `/a/b/c`, and the index form
+# `a/b/c/c.yaml` -> `/a/b/c` lets a route also have child folders. To add an
+# endpoint, drop in one file -- this section never changes.
 paths:
-  # Auth
-  /auth/login:
-    $ref: './auth/login.yaml'
-
-  # Chat
-  /chat:
-    $ref: './chat/chat.yaml'
-  /chat/history:
-    $ref: './chat/history.yaml'
-
-  # Actions
-  /actions:
-    $ref: './actions/pending.yaml'
-  /actions/{action_id}:
-    $ref: './actions/get.yaml'
-  /actions/{action_id}/approve:
-    $ref: './actions/approve.yaml'
-  /actions/{action_id}/deny:
-    $ref: './actions/deny.yaml'
-
-  # Tools
-  /tools:
-    $ref: './tools/list.yaml'
-  /tools/permissions:
-    $ref: './tools/permissions.yaml'
-  /tools/{tool_name}:
-    $ref: './tools/get.yaml'
-  /tools/{tool_name}/enable:
-    $ref: './tools/tool-enable.yaml'
-  /tools/{tool_name}/disable:
-    $ref: './tools/tool-disable.yaml'
-
-  # Module admin (proxied per-tool under /tools/{tool}/module).
-  # Each module defines its own routes; the server proxies them and enforces
-  # auth. The sibling $ref below merges in every module's paths from the
-  # generated aggregator (built by `make build-tools-module` from each
-  # `tools/modules/<m>/<m>.yaml`).
-  $ref: './tools/tools-module.yaml'
-
-  # TTS
-  /tts/available:
-    $ref: './tts/available.yaml'
-  /tts/enable:
-    $ref: './tts/enable.yaml'
-  /tts/fetch/{response_id}:
-    $ref: './tts/fetch.yaml'
-
-  # STT
-  /stt/available:
-    $ref: './stt/available.yaml'
-
-  # Stream
-  /stream:
-    $ref: './stream/stream.yaml'
-
-  # Notifications (FCM push fallback)
-  /notifications/register:
-    $ref: './notifications/register.yaml'
-  /notifications/unregister:
-    $ref: './notifications/unregister.yaml'
-
-  # Admin
-  /admin/dream/trigger:
-    $ref: './admin/dream-trigger.yaml'
-  /admin/transcript/rotate:
-    $ref: './admin/transcript-rotate.yaml'
-
-  # Debug
-  /debug/transcript:
-    $ref: './debug/transcript.yaml'
-  /debug/working-set:
-    $ref: './debug/working-set.yaml'
-  /debug/dream/status:
-    $ref: './debug/dream-status.yaml'
-  /debug/scheduler/status:
-    $ref: './debug/scheduler-status.yaml'
-  /debug/personality:
-    $ref: './debug/personality.yaml'
-  /debug/logs/{source_name}:
-    $ref: './health/logs.yaml'
-
-  # Health (mounted at the server root, outside the /api base)
-  /health:
-    $ref: './health/health.yaml'
+  $ref: ./_paths.generated.yaml

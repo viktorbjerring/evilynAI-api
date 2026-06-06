@@ -32,6 +32,6 @@ post:
                 type: boolean
                 example: false
     '401':
-      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
     '404':
-      $ref: '../openapi.yaml#/components/responses/NotFound'
+      $ref: '../../openapi.yaml#/components/responses/NotFound'

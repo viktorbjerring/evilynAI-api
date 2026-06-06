@@ -32,14 +32,14 @@ post:
                 type: boolean
                 example: true
     '401':
-      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
     '404':
-      $ref: '../openapi.yaml#/components/responses/NotFound'
+      $ref: '../../openapi.yaml#/components/responses/NotFound'
     '409':
       description: Tool cannot be re-enabled without a reload (setup failed)
       content:
         application/json:
           schema:
-            $ref: '../openapi.yaml#/components/schemas/Error'
+            $ref: '../../openapi.yaml#/components/schemas/Error'
           example:
             error: "Tool 'notebook' failed during setup and cannot be re-enabled without a reload()."

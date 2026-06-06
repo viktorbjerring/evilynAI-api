@@ -21,4 +21,4 @@ post:
                 enum: [queued]
                 example: "queued"
     '401':
-      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

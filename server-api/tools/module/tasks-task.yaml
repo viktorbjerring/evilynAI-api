@@ -1,0 +1,120 @@
+patch:
+  summary: Update a task (tasks module)
+  description: |
+    Module admin route proxied to the `tasks` tool. Updates a task's fields
+    and/or completion status. Omitted string fields are left unchanged; set
+    `completed` to mark done/undone. While offline the write is queued for
+    replay. Backend failures surface as `502`.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            title:
+              type: string
+            notes:
+              type: string
+            due:
+              type: string
+              description: RFC 3339 date-time.
+            completed:
+              type: boolean
+              nullable: true
+              description: True to mark completed, false to reopen, omit to keep.
+            task_list_id:
+              type: string
+              default: "@default"
+  responses:
+    '200':
+      description: Task updated
+      content:
+        application/json:
+          schema:
+            type: object
+            description: The updated task (Google Tasks shape).
+            additionalProperties: true
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              status:
+                type: string
+                enum: [needsAction, completed]
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Backend error (e.g. network or Google API failure)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+delete:
+  summary: Delete a task (tasks module)
+  description: |
+    Module admin route proxied to the `tasks` tool. Deletes a task from the
+    given list (defaults to the primary list). While offline the write is
+    queued for replay. Backend failures surface as `502`.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: task_list_id
+      in: query
+      required: false
+      schema:
+        type: string
+        default: "@default"
+  responses:
+    '200':
+      description: Task deleted
+      content:
+        application/json:
+          schema:
+            type: object
+            description: Backend-specific delete result.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Backend error (e.g. network or Google API failure)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

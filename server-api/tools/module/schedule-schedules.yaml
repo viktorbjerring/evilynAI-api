@@ -1,0 +1,152 @@
+get:
+  summary: List active schedules (scheduler module)
+  description: |
+    Module admin route proxied to the `schedule` tool's module under
+    `/tools/schedule/module`. Returns every active one-off and recurring
+    schedule, sorted by next trigger time. Times are returned in the user's
+    configured timezone (ISO 8601).
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Active schedules
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schedules]
+            properties:
+              schedules:
+                type: array
+                items:
+                  type: object
+                  required: [id, intent, status, trigger_time]
+                  properties:
+                    id:
+                      type: string
+                    intent:
+                      type: string
+                    context:
+                      type: string
+                    status:
+                      type: string
+                      example: "active"
+                    trigger_time:
+                      type: string
+                      format: date-time
+                      description: Next trigger time, in the user's timezone.
+                    recurrence_description:
+                      type: string
+                      nullable: true
+                      description: Human-readable cadence; null for one-off schedules.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+post:
+  summary: Create a schedule (scheduler module)
+  description: |
+    Create a one-off (`kind: single`) or recurring (`kind: recurring`)
+    schedule. For `single`, provide `delay_minutes` and/or `delay_hours`
+    (at least one must be positive). For `recurring`, `time_of_day` is
+    required; the cadence is daily unless `day_of_week`, `day_of_month`, or
+    `day_interval` is supplied.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [label, intent]
+          properties:
+            label:
+              type: string
+              description: Unique identifier for the schedule.
+              example: "standup"
+            intent:
+              type: string
+              description: What to do or say when the schedule fires.
+            context:
+              type: string
+              description: Background context used when generating the message later.
+            kind:
+              type: string
+              enum: [single, recurring]
+              default: single
+            delay_minutes:
+              type: integer
+              description: "single only: minutes from now to fire."
+            delay_hours:
+              type: integer
+              description: "single only: hours from now to fire."
+            time_of_day:
+              type: string
+              description: "recurring only: HH:MM 24-hour local time."
+              example: "09:00"
+            day_of_week:
+              type: string
+              description: "recurring only: comma-separated weekdays (e.g. 'Mon,Wed,Fri')."
+            day_of_month:
+              type: string
+              description: "recurring only: comma-separated days of month (e.g. '1,15')."
+            day_interval:
+              type: integer
+              description: "recurring only: repeat every N days."
+  responses:
+    '201':
+      description: Schedule created
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, kind, trigger_time]
+            properties:
+              id:
+                type: string
+              kind:
+                type: string
+                enum: [single, recurring]
+              trigger_time:
+                type: string
+                format: date-time
+                description: First trigger time, in the user's timezone.
+              recurrence_description:
+                type: string
+                description: Human-readable cadence (recurring only).
+    '400':
+      description: Missing label/intent, bad delay, or unknown kind
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: A schedule with this label already exists
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

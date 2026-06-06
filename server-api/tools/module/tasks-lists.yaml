@@ -1,0 +1,45 @@
+get:
+  summary: List task lists (tasks module)
+  description: |
+    Module admin route proxied to the `tasks` tool. Returns the available
+    task lists from the active backend (Google Tasks when online, otherwise
+    the local cache). Backend failures surface as `502`.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Task lists
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [lists]
+            properties:
+              lists:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Backend error (e.g. network or Google API failure)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,47 @@
+delete:
+  summary: Cancel a schedule (scheduler module)
+  description: |
+    Module admin route proxied to the `schedule` tool. Cancels the active
+    schedule with the given id.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "standup"
+  responses:
+    '200':
+      description: Schedule cancelled
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, id]
+            properties:
+              status:
+                type: string
+                example: "cancelled"
+              id:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No active schedule with this id
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

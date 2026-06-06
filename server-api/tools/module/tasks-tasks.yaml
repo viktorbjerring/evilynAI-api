@@ -1,0 +1,138 @@
+get:
+  summary: Read tasks (tasks module)
+  description: |
+    Module admin route proxied to the `tasks` tool. Reads tasks from a list
+    (defaults to the primary list). Backend failures surface as `502`.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: task_list_id
+      in: query
+      required: false
+      schema:
+        type: string
+        default: "@default"
+    - name: include_completed
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+  responses:
+    '200':
+      description: Tasks in the list
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tasks]
+            properties:
+              tasks:
+                type: array
+                items:
+                  type: object
+                  description: A task (Google Tasks shape).
+                  additionalProperties: true
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    notes:
+                      type: string
+                    due:
+                      type: string
+                    status:
+                      type: string
+                      enum: [needsAction, completed]
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Backend error (e.g. network or Google API failure)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+post:
+  summary: Create a task (tasks module)
+  description: |
+    Module admin route proxied to the `tasks` tool. Creates a task in the
+    given list (defaults to the primary list). While offline the write is
+    queued locally for replay (see `/tools/tasks/module/status`).
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [title]
+          properties:
+            title:
+              type: string
+            notes:
+              type: string
+            due:
+              type: string
+              description: RFC 3339 date-time; the date portion is used.
+            task_list_id:
+              type: string
+              default: "@default"
+  responses:
+    '201':
+      description: Task created
+      content:
+        application/json:
+          schema:
+            type: object
+            description: The created task (Google Tasks shape).
+            additionalProperties: true
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              status:
+                type: string
+                enum: [needsAction, completed]
+    '400':
+      description: Missing title
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Backend error (e.g. network or Google API failure)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,48 @@
+post:
+  summary: Fire a schedule immediately (scheduler module)
+  description: |
+    Module admin route proxied to the `schedule` tool. Fires the active
+    schedule now, bypassing its scheduled time. One-off schedules are
+    consumed; recurring schedules advance to their next occurrence.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "standup"
+  responses:
+    '200':
+      description: Schedule triggered
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, id]
+            properties:
+              status:
+                type: string
+                example: "triggered"
+              id:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No active schedule with this id
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

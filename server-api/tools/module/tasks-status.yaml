@@ -1,0 +1,34 @@
+get:
+  summary: Offline/auth status (tasks module)
+  description: |
+    Module admin route proxied to the `tasks` tool under
+    `/tools/tasks/module`. Reports the hybrid backend's health: how many
+    writes are queued for replay while offline, and whether a Google OAuth
+    token is present on disk.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Backend status
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [pending_operations, authenticated]
+            properties:
+              pending_operations:
+                type: integer
+                description: Writes queued locally for replay on reconnect.
+              authenticated:
+                type: boolean
+                description: True if a Google OAuth token exists on disk.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

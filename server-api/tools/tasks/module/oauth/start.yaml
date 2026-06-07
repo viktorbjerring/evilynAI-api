@@ -1,0 +1,54 @@
+post:
+  summary: Start Google OAuth (tasks module)
+  description: |
+    Module admin route on the `tasks` module. Begins the interactive Google
+    OAuth consent flow and returns the authorization URL the user should
+    visit. The CSRF state and PKCE verifier are persisted server-side for the
+    subsequent `/oauth/callback` exchange. Shared across Google-backed modules
+    via the common `GoogleAuthMixin`.
+
+    Returns `400` if no `credentials_file` is configured for the module, and
+    `502` if the OAuth library fails to build the flow.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Authorization URL to present to the user
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [authorization_url]
+            properties:
+              authorization_url:
+                type: string
+                format: uri
+                example: "https://accounts.google.com/o/oauth2/auth?..."
+    '400':
+      description: No credentials configured
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: OAuth flow could not be started
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

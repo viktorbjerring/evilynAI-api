@@ -9,7 +9,22 @@ tasks-tool:
         backend:
           type: string
           enum: [local, google]
-  
+          description: >-
+            Active backend from the last connection probe. 'google' when the
+            live Google Tasks backend is reachable, otherwise 'local'.
+        connected:
+          type: boolean
+          description: Whether the last probe reached the Google Tasks backend.
+        authenticated:
+          type: boolean
+          description: Whether a Google OAuth token is present on disk.
+        last_checked:
+          type: [string, "null"]
+          description: ISO-8601 timestamp of the last connection probe, or null.
+        error:
+          type: [string, "null"]
+          description: Reason the backend was unreachable, if any.
+
   user_actions:
     - name: user_setup_oauth
       parameters: {}

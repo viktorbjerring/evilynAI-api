@@ -22,7 +22,7 @@ get:
                 example: tasks
               details:
                 type: object
-                required: [authenticated, pending_operations]
+                required: [authenticated, pending_operations, connection]
                 properties:
                   authenticated:
                     type: boolean
@@ -30,6 +30,9 @@ get:
                   pending_operations:
                     type: integer
                     description: Number of offline-queued writes awaiting replay.
+                  connection:
+                    description: Last known backend connection state.
+                    $ref: '#/components/schemas/TasksConnectionState'
     '401':
       description: Unauthorized
       content:

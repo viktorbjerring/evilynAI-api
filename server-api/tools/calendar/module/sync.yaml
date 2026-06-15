@@ -1,0 +1,72 @@
+post:
+  summary: Trigger calendar sync (calendar module)
+  description: |
+    Module admin route on the `calendar` module. Runs the same silent
+    `sync()` the daily sync scheduler calls: every event inside the
+    configured window (default 30 days past to 90 days future) is pulled
+    from Google Calendar and upserted into the local event store by event
+    ID; locally-known events inside the window that are absent upstream are
+    marked `cancelled`. No trigger is posted to the AI system — this is
+    purely a data refresh.
+
+    Returns `409` if a sync is already in flight (the run is lock-guarded)
+    and `503` if the Google backend is unreachable.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Sync completed
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, upserted, cancelled]
+            properties:
+              status:
+                type: string
+                example: ok
+              upserted:
+                type: integer
+                description: Events inserted or updated in the local store.
+              cancelled:
+                type: integer
+                description: Local events newly marked cancelled by absence.
+              failed_calendars:
+                type: array
+                items:
+                  type: string
+                description: |
+                  Calendar IDs whose fetch failed, when any. Omitted on a
+                  fully successful run.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: A sync run is already in progress
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: busy
+              reason:
+                type: string
+    '503':
+      description: Google backend unreachable; nothing synced
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: offline

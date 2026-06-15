@@ -1,0 +1,62 @@
+post:
+  summary: Trigger tasks sync (tasks module)
+  description: |
+    Module admin route on the `tasks` module. Runs the same silent `sync()`
+    the daily sync scheduler calls: every Google task list is mirrored into
+    the module's local store. No trigger is posted to the AI system — this
+    is purely a data refresh.
+
+    Returns `409` if a sync is already in flight (the run is lock-guarded)
+    and `503` if the Google backend is unreachable.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Sync completed
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, synced_lists, synced_tasks]
+            properties:
+              status:
+                type: string
+                example: ok
+              synced_lists:
+                type: integer
+                description: Number of task lists mirrored into the local store.
+              synced_tasks:
+                type: integer
+                description: Total tasks mirrored across all lists.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: A sync run is already in progress
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: busy
+              reason:
+                type: string
+    '503':
+      description: Google backend unreachable; nothing synced
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: offline

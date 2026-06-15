@@ -1,0 +1,84 @@
+get:
+  summary: List calendar events (calendar module)
+  description: |
+    Module admin route on the `calendar` module. Lists non-cancelled events,
+    soonest first. Served by the hybrid backend: Google Calendar when
+    reachable, otherwise the local event store the daily sync maintains.
+
+    Cancelled events are always excluded, so `status` in every result is
+    `confirmed` or `tentative` — never `cancelled`.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: calendar_id
+      in: query
+      required: false
+      schema:
+        type: string
+        default: primary
+      description: Calendar to read.
+    - name: time_min
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Earliest event start (RFC 3339). Omit for no lower bound.
+    - name: time_max
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Latest event start (RFC 3339). Omit for no upper bound.
+  responses:
+    '200':
+      description: Events in the window
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [events]
+            properties:
+              events:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    calendar_id:
+                      type: string
+                    summary:
+                      type: string
+                    start:
+                      type: string
+                      description: RFC 3339 datetime, or YYYY-MM-DD when all_day.
+                    end:
+                      type: string
+                    all_day:
+                      type: boolean
+                    description:
+                      type: string
+                    location:
+                      type: string
+                    status:
+                      type: string
+                      enum: [confirmed, tentative, cancelled]
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Backend failure
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

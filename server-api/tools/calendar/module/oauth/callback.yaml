@@ -1,0 +1,67 @@
+post:
+  summary: Complete Google OAuth (calendar module)
+  description: |
+    Module admin route on the `calendar` module. Completes the interactive
+    Google OAuth flow by exchanging the authorization `code` from the
+    callback for a token, which is written to disk. After this succeeds the
+    module reports `authenticated: true` on its root details. Shared across
+    Google-backed modules via the common `GoogleAuthMixin`.
+
+    Returns `400` if no `credentials_file` is configured or `code` is missing,
+    and `502` if the token exchange fails.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [code]
+          properties:
+            code:
+              type: string
+              description: Authorization code returned to the OAuth callback.
+  responses:
+    '200':
+      description: OAuth completed; token persisted
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, token_path]
+            properties:
+              status:
+                type: string
+                example: ok
+              token_path:
+                type: string
+                description: Filesystem path the OAuth token was written to.
+    '400':
+      description: No credentials configured or missing code
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Token exchange failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

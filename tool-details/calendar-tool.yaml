@@ -1,0 +1,21 @@
+calendar-tool:
+  tool_state:
+    - type: object
+      properties:
+        enabled:
+          type: boolean
+        description:
+          type: string
+        credentials_path:
+          type: string
+        token_path:
+          type: string
+        google_scopes:
+          type: array
+          items:
+            type: string
+
+  user_actions: []
+
+  details:
+    {}

@@ -40,6 +40,13 @@ get:
                       type: string
                       format: date-time
                       nullable: true
+                    feedback_flag:
+                      type: string
+                      enum: [undecided, encouraged, discouraged]
+                      description: |
+                        Reinforcement signal carried on the message. Only
+                        assistant messages are ever marked; everything else
+                        is `undecided`. Set via `POST /chat/feedback`.
     '401':
       description: Unauthorized
       content:

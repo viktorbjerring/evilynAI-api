@@ -1,0 +1,67 @@
+post:
+  summary: Mark the latest assistant message with reinforcement feedback
+  description: |
+    Annotates the most recent `assistant` message in the live transcript
+    with a reinforcement signal. The feedback is later consumed by the
+    nightly personality consolidation pipeline.
+
+    Re-sending a flag that is already set toggles it back to `undecided`.
+    There is no per-message targeting — feedback always applies to the
+    latest assistant message.
+  tags: [chat]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [feedback]
+          properties:
+            feedback:
+              type: string
+              enum: [undecided, encouraged, discouraged]
+              example: encouraged
+  responses:
+    '200':
+      description: Feedback applied
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, feedback]
+            properties:
+              status:
+                type: string
+                example: ok
+              feedback:
+                type: string
+                enum: [undecided, encouraged, discouraged]
+    '400':
+      description: Missing or invalid feedback value
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No assistant message available to mark
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

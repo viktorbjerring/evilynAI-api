@@ -1,0 +1,42 @@
+post:
+  summary: Categorize uncategorized notes (notebook module)
+  description: |
+    Module admin route proxied to the `notebook` tool's module under
+    `/tools/notebook/module`. Scans the notebook for notes that have no
+    category assigned and, if any exist, posts a `ModuleTrigger` asking the
+    AI to read each one and assign a fitting category (reusing an existing
+    category when possible). Returns immediately with the list of titles
+    handed off for categorization; the categorization itself happens
+    asynchronously on the AI consumer loop.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: |
+        Result of the sweep. `status` is `requested` when one or more
+        uncategorized notes were found and a trigger was posted, or `none`
+        when every note already has a category (no trigger posted).
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, uncategorized]
+            properties:
+              status:
+                type: string
+                enum: [requested, none]
+              uncategorized:
+                type: array
+                description: Titles of the notes handed off for categorization.
+                items:
+                  type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

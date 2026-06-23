@@ -29,13 +29,46 @@ get:
                 type: array
                 items:
                   type: object
+                  required: [role, content, feedback_flag]
                   properties:
                     role:
                       type: string
                       enum: [user, assistant, system, tool_call, tool_result]
-                      description: Clients should tolerate and ignore tool_call/tool_result roles
+                      description: Conversation role of the message.
                     content:
-                      type: string
+                      description: |
+                        Shape depends on `role`:
+                        - `user` / `assistant`: a plain string.
+                        - `system`: an object `{sender, message}` identifying
+                          the originating component and the message body.
+                        - `tool_call`: the parsed JSON array of tool calls,
+                          each `{name, arguments}`.
+                        - `tool_result`: the parsed JSON object `{tool, result}`.
+                      oneOf:
+                        - type: string
+                        - type: object
+                          required: [sender, message]
+                          properties:
+                            sender:
+                              type: string
+                            message:
+                              type: string
+                        - type: array
+                          items:
+                            type: object
+                            required: [name, arguments]
+                            properties:
+                              name:
+                                type: string
+                              arguments:
+                                type: object
+                        - type: object
+                          required: [tool, result]
+                          properties:
+                            tool:
+                              type: string
+                            result:
+                              type: string
                     timestamp:
                       type: string
                       format: date-time

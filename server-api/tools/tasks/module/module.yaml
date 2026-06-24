@@ -32,7 +32,7 @@ get:
                     description: Number of offline-queued writes awaiting replay.
                   connection:
                     description: Last known backend connection state.
-                    $ref: '#/components/schemas/TasksConnectionState'
+                    $ref: '../../../openapi.yaml#/components/schemas/TasksConnectionState'
     '401':
       description: Unauthorized
       content:

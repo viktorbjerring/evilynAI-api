@@ -1,0 +1,102 @@
+get:
+  summary: Get current AI subsystem config
+  description: |
+    Returns the editable AI subsystem tuning settings currently persisted in
+    the server's `AI_SETTINGS` JSON file (see `AIConfig`).
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Current config
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [config, restart_required]
+            properties:
+              config:
+                $ref: '../openapi.yaml#/components/schemas/ConfigSettings'
+              restart_required:
+                type: boolean
+                enum: [false]
+                description: >-
+                  Always `false` for `GET` — included for symmetry with the
+                  `PATCH` response shape.
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+
+patch:
+  summary: Update AI subsystem config
+  description: |
+    Validates and persists a partial update to the `AI_SETTINGS` JSON file.
+    The request body is a partial nested object of the same shape as
+    `ConfigSettings`: only the fields being changed need to be present, and
+    they are merged into the existing settings.
+
+    Updates are written to disk only -- there is no live reload. The
+    running process keeps its current in-memory config until the server is
+    restarted, hence `"applied": false` and `"restart_required": true` on
+    every successful response.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../openapi.yaml#/components/schemas/ConfigSettings'
+        example:
+          short_term:
+            transcript:
+              max_tokens: 4000
+          scheduler:
+            schedule_hour: 4
+  responses:
+    '200':
+      description: >-
+        Update validated and persisted to the `AI_SETTINGS` file. Not yet
+        applied to the running process.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [applied, restart_required, updated]
+            properties:
+              applied:
+                type: boolean
+                enum: [false]
+                description: Always `false` -- changes take effect on the next server restart, not live.
+              restart_required:
+                type: boolean
+                enum: [true]
+              updated:
+                allOf:
+                  - $ref: '../openapi.yaml#/components/schemas/ConfigSettings'
+                description: The full settings object after merging in this update.
+    '400':
+      description: One or more fields are unknown, out of range, or the wrong type.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [errors]
+            properties:
+              errors:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "Unknown field: 'ltm.bogus_field'"
+                  - "'scheduler.schedule_hour' must be between 0 and 23"
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '409':
+      description: No `AI_SETTINGS` file is configured on the server, so there is nowhere to persist the update.
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'
+          example:
+            error: "No AI_SETTINGS file configured"

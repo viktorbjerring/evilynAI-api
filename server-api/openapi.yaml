@@ -56,6 +56,157 @@ components:
         status:
           $ref: '#/components/schemas/ActionStatus'
 
+    ConfigSettings:
+      type: object
+      description: >-
+        Editable AI-subsystem tuning settings, mirroring `AIConfig`. Used
+        both as the full object (`GET /admin/config`) and, on
+        `PATCH /admin/config`, as a partial nested object containing only
+        the fields to change.
+      properties:
+        ltm:
+          type: object
+          description: Long-term memory tuning (`LTMConfig`).
+          properties:
+            vs_search_count:
+              type: integer
+              minimum: 1
+              description: Number of candidates pulled from the vector store per retrieval.
+            wm_max_size:
+              type: integer
+              minimum: 1
+              description: Maximum number of memories held in the working set.
+            wm_injection_count:
+              type: integer
+              minimum: 1
+              description: Number of working-set memories injected into the system context per turn.
+            decay_half_life_hours:
+              type: number
+              exclusiveMinimum: 0
+              description: Half-life, in hours, of working-set relevance decay.
+            min_score:
+              type: number
+              minimum: 0
+              maximum: 1
+              description: Minimum relevance score for a memory to remain in the working set.
+            short_message_min_words:
+              type: integer
+              minimum: 0
+              description: Minimum word count for a message to trigger retrieval.
+            reconciliation_similarity_threshold:
+              type: number
+              minimum: 0
+              maximum: 1
+              description: Similarity threshold above which a new memory candidate is reconciled against an existing one.
+        personality:
+          type: object
+          description: Personality trait store tuning (`PersonalityConfig`).
+          properties:
+            min_confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+              description: Minimum confidence for a trait to be surfaced.
+            merge_similarity_threshold:
+              type: number
+              minimum: 0
+              maximum: 1
+              description: Similarity threshold above which two traits are merged during normalisation.
+            stale_days_decay_start:
+              type: integer
+              minimum: 0
+              description: Days since last reinforcement before a trait's confidence starts decaying.
+            stale_days_drop_floor:
+              type: integer
+              minimum: 0
+              description: Days since last reinforcement after which a trait becomes eligible for dropping.
+            drop_confidence_floor:
+              type: number
+              minimum: 0
+              maximum: 1
+              description: Confidence below which a stale trait is dropped.
+        short_term:
+          type: object
+          description: Short-term memory tuning (`ShortTermConfig`).
+          properties:
+            transcript:
+              type: object
+              description: Transcript buffer tuning (`TranscriptConfig`).
+              properties:
+                max_tokens:
+                  type: integer
+                  minimum: 1
+                  description: Token budget for the transcript buffer before rotation.
+                summarization_threshold:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                  description: Fraction of `max_tokens` at which rotation (summarisation) is triggered.
+                extraction_token_min:
+                  type: integer
+                  minimum: 0
+                  description: Minimum token count of the rotated-out window for it to be summarised.
+            summarizer:
+              type: object
+              description: Rolling summariser tuning (`SummarizerConfig`).
+              properties:
+                window_size:
+                  type: integer
+                  minimum: 1
+                  description: Number of summaries merged into the meta-summary at a time.
+                max_summaries:
+                  type: integer
+                  minimum: 1
+                  description: Maximum number of rolling summaries retained before merging.
+        scheduler:
+          type: object
+          description: Internal nightly dream scheduler tuning.
+          properties:
+            enabled:
+              type: boolean
+              description: Whether the nightly dream scheduler runs at all.
+            schedule_hour:
+              type: integer
+              minimum: 0
+              maximum: 23
+              description: Local hour (0-23) at which the nightly dream pipeline fires.
+            schedule_minute:
+              type: integer
+              minimum: 0
+              maximum: 59
+              description: Local minute (0-59) at which the nightly dream pipeline fires.
+            catchup_on_boot:
+              type: boolean
+              description: Whether a missed nightly run fires immediately on server boot.
+      example:
+        ltm:
+          vs_search_count: 10
+          wm_max_size: 40
+          wm_injection_count: 8
+          decay_half_life_hours: 72
+          min_score: 0.15
+          short_message_min_words: 4
+          reconciliation_similarity_threshold: 0.85
+        personality:
+          min_confidence: 0.3
+          merge_similarity_threshold: 0.85
+          stale_days_decay_start: 14
+          stale_days_drop_floor: 60
+          drop_confidence_floor: 0.1
+        short_term:
+          transcript:
+            max_tokens: 4000
+            summarization_threshold: 0.8
+            extraction_token_min: 200
+          summarizer:
+            window_size: 5
+            max_summaries: 20
+        scheduler:
+          enabled: true
+          schedule_hour: 3
+          schedule_minute: 30
+          catchup_on_boot: true
+
     TasksConnectionState:
       type: object
       required: [backend, connected, authenticated, last_checked, error]

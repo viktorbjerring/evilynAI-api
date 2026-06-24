@@ -19,7 +19,7 @@ post:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/TasksConnectionState'
+            $ref: '../../../../openapi.yaml#/components/schemas/TasksConnectionState'
     '401':
       description: Unauthorized
       content:

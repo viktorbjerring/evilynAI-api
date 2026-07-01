@@ -1,0 +1,104 @@
+get:
+  summary: List calendar events starting in a window (calendar module)
+  description: |
+    Module admin route on the `calendar` module. Returns events whose start
+    timestamp falls in `[start, end)`, soonest first, merged across every
+    calendar in `calendar_ids` unless `calendar_id` narrows it to one.
+
+    Unlike `GET /events` — which windows on overlap and, offline, only
+    compares date parts — this filters on the parsed start instant itself,
+    so a window like `09:00` today to `09:00` tomorrow excludes an event
+    that started at `08:30` even though it falls on the same calendar day.
+    Intended for a daily "what's on today" check (e.g. a scheduled trigger
+    firing each morning to look ahead at the next 24 hours).
+
+    Served by the hybrid backend: Google Calendar when reachable, otherwise
+    the local event store the daily sync maintains. Cancelled events are
+    always excluded.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: start
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+      description: Inclusive lower bound on event start (RFC 3339).
+    - name: end
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+      description: Exclusive upper bound on event start (RFC 3339).
+    - name: calendar_id
+      in: query
+      required: false
+      schema:
+        type: string
+      description: >-
+        Restrict to a single calendar. Omit to query every calendar in the
+        module's configured `calendar_ids` and merge the results.
+  responses:
+    '200':
+      description: Events starting in the window
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [events]
+            properties:
+              events:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    calendar_id:
+                      type: string
+                    summary:
+                      type: string
+                    start:
+                      type: string
+                      description: RFC 3339 datetime, or YYYY-MM-DD when all_day.
+                    end:
+                      type: string
+                    all_day:
+                      type: boolean
+                    description:
+                      type: string
+                    location:
+                      type: string
+                    status:
+                      type: string
+                      enum: [confirmed, tentative]
+    '400':
+      description: Missing or unparseable start/end
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '502':
+      description: Backend failure
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

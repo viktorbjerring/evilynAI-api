@@ -1,0 +1,74 @@
+get:
+  summary: Get a tool's action log
+  description: |
+    Returns the tool's exploded action log — one entry for every action
+    dispatched through the toolset, recorded in the tool's own data directory.
+    Each entry captures the action name, effective permission, arguments,
+    outcome status (`executed`, `queued`, `disabled`, or `error`), and the
+    result. Entries are ordered oldest-first.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: tool_name
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "notebook"
+    - name: limit
+      in: query
+      required: false
+      description: Return only the most recent N entries.
+      schema:
+        type: integer
+        minimum: 0
+        example: 50
+  responses:
+    '200':
+      description: Tool action log
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tool, count, logs]
+            properties:
+              tool:
+                type: string
+              count:
+                type: integer
+                description: Number of log entries returned.
+              logs:
+                type: array
+                items:
+                  type: object
+                  required: [timestamp, tool, action, permission, status]
+                  properties:
+                    timestamp:
+                      type: string
+                      format: date-time
+                    tool:
+                      type: string
+                    action:
+                      type: string
+                      example: "write"
+                    permission:
+                      type: string
+                      enum: [immediate, requires_approval, disabled, system_only]
+                    status:
+                      type: string
+                      enum: [executed, queued, disabled, error]
+                    arguments:
+                      type: object
+                    result:
+                      type: string
+    '400':
+      description: Invalid query parameter (e.g. negative limit)
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      $ref: '../../openapi.yaml#/components/responses/NotFound'

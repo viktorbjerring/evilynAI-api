@@ -1,0 +1,64 @@
+get:
+  summary: Read a project file (projects module)
+  description: |
+    Module admin route on the `projects` module. Returns the text content of a
+    single file within a project. `path` is a file path relative to the project
+    root; paths that escape the project folder are rejected. Read-only.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Project name.
+    - name: path
+      in: query
+      required: true
+      schema:
+        type: string
+      description: File path relative to the project root.
+  responses:
+    '200':
+      description: The file content
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [project, path, content]
+            properties:
+              project:
+                type: string
+              path:
+                type: string
+              content:
+                type: string
+    '400':
+      description: Invalid project name or an escaping/invalid path
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No such project or file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

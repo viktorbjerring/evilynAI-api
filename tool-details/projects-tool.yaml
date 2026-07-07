@@ -1,0 +1,16 @@
+projects-tool:
+  tool_state:
+    - type: object
+      properties:
+        enabled:
+          type: boolean
+        description:
+          type: string
+
+  # No user_actions — the projects tool's AI actions (query/update/create) are
+  # not user-invokable, and creation is gated through the approval queue.
+  user_actions: []
+
+  # No extra details surfaced on the tool itself; the module admin root
+  # (GET /tools/projects/module/) exposes num_projects / projects / chat_messages.
+  details: {}

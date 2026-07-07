@@ -1,0 +1,70 @@
+post:
+  summary: Advance the admin chat (projects module)
+  description: |
+    Module admin route on the `projects` module. Sends one message to the admin
+    chat and returns the assistant's reply plus the full updated transcript.
+
+    This is a direct, full-power write channel for the human owner: the chat
+    subagent can read, create, and update projects and their files, and is not
+    subject to the approval queue that gates Evilyn's own actions. The prior
+    transcript is replayed as conversational context on every turn, so the chat
+    has memory across messages — send only the new `message`. The call is
+    synchronous and can take several seconds while the subagent runs its tool
+    loop.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [message]
+          properties:
+            message:
+              type: string
+              description: The new user message. Must be non-blank.
+  responses:
+    '200':
+      description: The reply and the full updated transcript
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reply, transcript]
+            properties:
+              reply:
+                type: string
+              transcript:
+                type: array
+                items:
+                  type: object
+                  required: [role, content, timestamp]
+                  properties:
+                    role:
+                      type: string
+                      enum: [user, assistant]
+                    content:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+    '400':
+      description: Missing or blank message
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

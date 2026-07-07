@@ -1,0 +1,61 @@
+get:
+  summary: Get a project (projects module)
+  description: |
+    Module admin route on the `projects` module. Returns a single project's
+    name, one-line description, and the sorted relative paths of every file it
+    contains (recursive). Read-only.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Project name.
+  responses:
+    '200':
+      description: The project
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, description, files]
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              files:
+                type: array
+                items:
+                  type: string
+                description: Sorted relative file paths within the project.
+    '400':
+      description: Invalid project name
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No such project
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

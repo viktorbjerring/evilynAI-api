@@ -1,0 +1,82 @@
+post:
+  summary: Upload a file to a project folder (projects module)
+  description: |
+    Module admin route on the `projects` module. Saves an uploaded file into a
+    folder within a project. Send `multipart/form-data` with the binary `file`
+    part and an optional `path` field naming the destination folder relative to
+    the project root (default: the project root); the folder and any missing
+    intermediate directories are created. Writing over an existing file
+    replaces it. The uploaded filename must be a single safe name (no path
+    separators); unsafe names or a `path` that escapes the project are rejected.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Project name.
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          required: [file]
+          properties:
+            file:
+              type: string
+              format: binary
+              description: The file to upload.
+            path:
+              type: string
+              default: ""
+              description: Destination folder relative to the project root.
+  responses:
+    '200':
+      description: File saved
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [project, path, status]
+            properties:
+              project:
+                type: string
+              path:
+                type: string
+                description: Saved file path relative to the project root.
+              status:
+                type: string
+                enum: [created, updated]
+    '400':
+      description: |
+        Missing file, an unsafe filename, or an escaping/invalid destination
+        path.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No such project
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

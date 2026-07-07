@@ -43,6 +43,7 @@ includes by default.
 | `scheduler-tool.yaml`      | `schedule`          |
 | `tasks-tool.yaml`          | `tasks`             |
 | `ask-the-oracle-tool.yaml` | `ask_the_oracle`    |
+| `projects-tool.yaml`       | `projects`          |
 
 ## Generating docs
 

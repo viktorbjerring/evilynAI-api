@@ -1,0 +1,46 @@
+get:
+  summary: projects module details
+  description: |
+    Module root for the `projects` module. Returns the module name plus a
+    summary of the projects knowledge base: how many projects exist, their
+    names, and the number of admin-chat transcript messages recorded so far.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: projects
+              details:
+                type: object
+                required: [num_projects, projects, chat_messages]
+                properties:
+                  num_projects:
+                    type: integer
+                  projects:
+                    type: array
+                    items:
+                      type: string
+                    description: Project names, sorted.
+                  chat_messages:
+                    type: integer
+                    description: |
+                      Count of individual admin-chat transcript messages (one
+                      per user or assistant turn), not conversation rounds.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

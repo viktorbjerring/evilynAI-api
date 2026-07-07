@@ -1,0 +1,86 @@
+get:
+  summary: Browse a project directory (projects module)
+  description: |
+    Module admin route on the `projects` module. Lists a single directory level
+    (non-recursive) within a project, for a file-browser UI. `path` is a
+    directory path relative to the project root (default: the project root);
+    paths that escape the project folder are rejected.
+
+    Returns the normalised location (`path`, empty string for the root), the
+    files in that directory (each with its `type` — the file extension without
+    the leading dot, lowercased, empty when it has none), and the subfolders.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Project name.
+    - name: path
+      in: query
+      required: false
+      schema:
+        type: string
+        default: ""
+      description: Directory path relative to the project root (default root).
+  responses:
+    '200':
+      description: One directory level
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [path, files, folders]
+            properties:
+              path:
+                type: string
+                description: Normalised directory location (empty at the root).
+              files:
+                type: array
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      description: File extension without the dot (lowercase).
+              folders:
+                type: array
+                items:
+                  type: object
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+    '400':
+      description: Invalid project name or an escaping/invalid path
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No such project, or the path is not a directory
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

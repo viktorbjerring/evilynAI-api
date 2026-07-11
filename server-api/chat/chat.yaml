@@ -9,6 +9,13 @@ post:
     The file is transcribed server-side via OpenAI Whisper. The transcription is
     returned in `input_transcription`.
 
+    **Thinking mode:** an optional `thinking` flag requests a two-phase run — the
+    assistant reasons (streaming `thinking` SSE events on the event stream) before
+    producing her reply. It defaults to `false` (single-pass). For JSON send a
+    boolean; for multipart send a `thinking` form field with a truthy string
+    (`true`/`1`/`yes`/`on`). The reasoning is delivered only over SSE, never in
+    this response.
+
     The response may include `audio_url` — a TTS response ID. Fetch the audio
     from `GET /api/tts/fetch/{audio_url}`.
   tags: [chat]
@@ -25,6 +32,12 @@ post:
             message:
               type: string
               example: "Hey, how are you?"
+            thinking:
+              type: boolean
+              default: false
+              description: >
+                When true, run two-phase inference: the assistant reasons
+                (streaming `thinking` SSE events) before replying.
       multipart/form-data:
         schema:
           type: object
@@ -34,32 +47,32 @@ post:
               type: string
               format: binary
               description: Audio file (webm recommended)
+            thinking:
+              type: string
+              enum: ["true", "1", "yes", "on", "false", "0", "no", "off"]
+              default: "false"
+              description: >
+                Truthy string enables two-phase (thinking) inference for this
+                voice message; omitted or falsy runs single-pass.
   responses:
-    '200':
-      description: AI response
+    '202':
+      description: |
+        Message accepted for asynchronous processing. The endpoint returns
+        immediately; the assistant reply — and any `thinking` reasoning — is
+        delivered later over the SSE stream, not in this response.
       content:
         application/json:
           schema:
             type: object
-            required: [response, timestamp]
+            required: [status]
             properties:
-              response:
+              status:
                 type: string
-                description: AI text response
-              timestamp:
-                type: string
-                format: date-time
+                example: accepted
               input_transcription:
                 type: string
                 nullable: true
                 description: Whisper transcription (only present for audio input)
-              audio_url:
-                type: string
-                nullable: true
-                description: TTS response ID — fetch audio from GET /tts/fetch/{audio_url}
-              metadata:
-                type: object
-                additionalProperties: true
     '400':
       description: Missing or empty message
       content:

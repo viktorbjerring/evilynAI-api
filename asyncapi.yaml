@@ -47,6 +47,8 @@ channels:
         $ref: "#/components/messages/tool_call"
       tool_result:
         $ref: "#/components/messages/tool_result"
+      thinking:
+        $ref: "#/components/messages/thinking"
       error:
         $ref: "#/components/messages/error"
 
@@ -63,6 +65,7 @@ operations:
       - $ref: "#/channels/stream/messages/typing"
       - $ref: "#/channels/stream/messages/tool_call"
       - $ref: "#/channels/stream/messages/tool_result"
+      - $ref: "#/channels/stream/messages/thinking"
       - $ref: "#/channels/stream/messages/error"
 
 components:
@@ -214,6 +217,27 @@ components:
                 - title: "Latest news"
                   url: "https://example.com"
             timestamp: "2026-03-11T12:00:04+00:00"
+
+    thinking:
+      name: thinking
+      title: Thinking turn
+      summary: >
+        Sent for each reasoning turn during the thinking phase of a two-phase
+        inference run. Informational and SSE-only; one message per thinking
+        turn, not incremental token streaming.
+      contentType: application/json
+      payload:
+        type: object
+        required: [content, timestamp]
+        properties:
+          content:
+            type: string
+            description: The reasoning text for this thinking turn
+          timestamp:
+            $ref: "#/components/schemas/Timestamp"
+        examples:
+          - content: "The user wants notes; let me check the notebook tool."
+            timestamp: "2026-03-11T12:00:03+00:00"
 
     error:
       name: error

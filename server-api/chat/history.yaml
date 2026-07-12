@@ -33,12 +33,12 @@ get:
                   properties:
                     role:
                       type: string
-                      enum: [user, assistant, system, tool_call, tool_result]
+                      enum: [user, assistant, system, tool_call, tool_result, thinking]
                       description: Conversation role of the message.
                     content:
                       description: |
                         Shape depends on `role`:
-                        - `user` / `assistant`: a plain string.
+                        - `user` / `assistant` / `thinking`: a plain string.
                         - `system`: an object `{sender, message}` identifying
                           the originating component and the message body.
                         - `tool_call`: the parsed JSON array of tool calls,

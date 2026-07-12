@@ -19,11 +19,12 @@ get:
                 type: array
                 items:
                   type: object
-                  required: [role, content]
+                  required: [role, content, feedback_flag]
                   properties:
                     role:
                       type: string
-                      enum: [user, assistant, system, tool_call, tool_result]
+                      enum: [user, assistant, system, tool_call, tool_result, thinking]
+                      description: Conversation role of the message.
                     content:
                       type: string
                     timestamp:
@@ -31,8 +32,12 @@ get:
                       format: date-time
                       nullable: true
                     feedback_flag:
-                      type: boolean
-                      nullable: true
+                      type: string
+                      enum: [undecided, encouraged, discouraged]
+                      description: |
+                        Reinforcement signal carried on the message. Only
+                        assistant messages are ever marked; everything else
+                        is `undecided`.
     '401':
       description: Unauthorized
       content:

@@ -1,0 +1,74 @@
+post:
+  summary: Start a Wordle game (wordle module)
+  description: |
+    Module admin route proxied to the `wordle` tool. Starts a new game with a
+    user-chosen secret word. This is the secret-entry surface: the secret is
+    submitted here, server-side, and never enters Evilyn's inference — she only
+    ever sees the board.
+
+    The secret must be a legal five-letter dictionary word; otherwise the game
+    is not started (`400`). Starting a game **replaces** any game already in
+    progress. On success the module posts the first turn's trigger, restricting
+    Evilyn to the `guess` action for that turn.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [word]
+          properties:
+            word:
+              type: string
+              description: The secret five-letter word. `secret` is accepted as an alias.
+  responses:
+    '200':
+      description: Game started.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [started]
+              game_id:
+                type: string
+                description: Session id of the new game; correlates with later `GameStateEvent`s.
+              round:
+                type: integer
+                example: 1
+              max_rounds:
+                type: integer
+                example: 6
+              message:
+                type: string
+    '400':
+      description: |
+        The secret was missing (`error`) or not a legal five-letter dictionary
+        word (`status: invalid_secret`).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [invalid_secret]
+              error:
+                type: string
+              message:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

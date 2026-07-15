@@ -1,0 +1,30 @@
+post:
+  summary: Reset the Wordle game (wordle module)
+  description: |
+    Module admin route proxied to the `wordle` tool. Abandons the current game
+    (if any), clearing the secret and board and returning the module to the
+    `none` state. Always succeeds.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The game was reset.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [reset]
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

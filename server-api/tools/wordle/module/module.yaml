@@ -1,0 +1,64 @@
+get:
+  summary: wordle module details
+  description: |
+    Module root for the `wordle` game module. Returns the module name plus the
+    current game state: status, the round reached, the maximum number of
+    rounds, the scored board so far, and the size of the bundled dictionary.
+    The secret word is never included.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: wordle
+              details:
+                type: object
+                required: [game_id, status, round, max_rounds, board, dictionary_size]
+                properties:
+                  game_id:
+                    type: string
+                    nullable: true
+                    description: Session id of the current game, or null when none is active.
+                  status:
+                    type: string
+                    enum: [none, in_progress, dormant, won, lost]
+                  round:
+                    type: integer
+                    description: Number of scored guesses so far.
+                  max_rounds:
+                    type: integer
+                    example: 6
+                  board:
+                    type: array
+                    description: One entry per scored guess, oldest first.
+                    items:
+                      type: object
+                      required: [guess, pattern]
+                      properties:
+                        guess:
+                          type: string
+                        pattern:
+                          type: array
+                          items:
+                            type: string
+                            enum: [green, yellow, grey]
+                  dictionary_size:
+                    type: integer
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,57 @@
+get:
+  summary: Read the live Wordle board (wordle module)
+  description: |
+    Module read route proxied to the `wordle` tool. This is the client's
+    normal-operation read path for live game state: on a `GameStateEvent` the
+    client fetches the authoritative scored board from here (the event is a thin
+    change-signal and never carries the board itself). The response echoes
+    `game_id` so the client can confirm the board matches the game the event
+    referred to. The secret word is never included.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Current game state.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [game_id, status, round, max_rounds, board]
+            properties:
+              game_id:
+                type: string
+                nullable: true
+                description: Session id of the current game, or null when none is active.
+              status:
+                type: string
+                enum: [none, in_progress, dormant, won, lost]
+              round:
+                type: integer
+                description: Number of scored guesses so far.
+              max_rounds:
+                type: integer
+                example: 6
+              board:
+                type: array
+                description: One entry per scored guess, oldest first.
+                items:
+                  type: object
+                  required: [guess, pattern]
+                  properties:
+                    guess:
+                      type: string
+                    pattern:
+                      type: array
+                      items:
+                        type: string
+                        enum: [green, yellow, grey]
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

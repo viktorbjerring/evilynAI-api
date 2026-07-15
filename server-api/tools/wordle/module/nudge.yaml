@@ -1,0 +1,50 @@
+post:
+  summary: Nudge a dormant Wordle game (wordle module)
+  description: |
+    Module admin route proxied to the `wordle` tool. Re-posts the current board
+    as a fresh turn trigger. Its main use is to wake a game that went dormant
+    (Evilyn declined to guess, or made no legal guess, on a previous turn), but
+    it also accepts an `in_progress` game — the re-posted turn simply lands
+    behind any turn already in flight on the single-consumer FIFO bus. Returns
+    `409` only when there is no active game at all (status `none`, `won`, or
+    `lost`).
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The current board was re-posted.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [nudged]
+              round:
+                type: integer
+              message:
+                type: string
+    '409':
+      description: No active game to nudge.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [no_active_game]
+              message:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

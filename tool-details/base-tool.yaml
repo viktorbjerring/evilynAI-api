@@ -7,6 +7,4 @@ base-tool:
         description:
           type: string
 
-  user_actions: []
-
   details: {}

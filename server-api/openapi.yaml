@@ -30,6 +30,99 @@ components:
           type: string
           example: "Action not found"
 
+    AdminActionParam:
+      type: object
+      description: >-
+        One parameter of a declared admin action (`AdminAction.parameters`).
+      required: [name, in, type, required, description]
+      properties:
+        name:
+          type: string
+        in:
+          type: string
+          enum: [path, query, body]
+        type:
+          type: string
+          enum: [string, integer, number, boolean, array, object]
+        required:
+          type: boolean
+        description:
+          type: string
+        default:
+          description: Default value, if any, in the parameter's declared type.
+        enum:
+          type: array
+          items:
+            type: string
+          description: Allowed values, if the parameter is constrained to a fixed set.
+        example:
+          description: Example value, if any, in the parameter's declared type.
+
+    AdminAction:
+      type: object
+      description: >-
+        A declared, self-describing module admin route -- one entry in the
+        `/tools/admin-actions` manifest (also embedded per-tool as
+        `admin_actions` on `GET /tools/{tool_name}`). This is a client
+        rendering contract: it lets a client build admin UI from a
+        machine-readable catalogue instead of hand-maintaining a hardcoded
+        route list that drifts from the code.
+      required:
+        - tool
+        - id
+        - label
+        - description
+        - method
+        - path
+        - parameters
+        - destructive
+        - opens_url
+        - order
+      properties:
+        tool:
+          type: string
+          example: "schedule"
+        id:
+          type: string
+          description: Stable id, `<tool>.<view function name>`.
+          example: "schedule.delete_schedule"
+        label:
+          type: string
+          example: "Cancel schedule"
+        description:
+          type: string
+        method:
+          type: string
+          enum: [GET, POST, PATCH, PUT, DELETE]
+        path:
+          type: string
+          description: >-
+            The route's URL, with `{name}` placeholders for path parameters
+            (never Werkzeug `<converter:name>` syntax).
+          example: "/api/tools/schedule/module/schedules/{schedule_id}"
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminActionParam'
+        destructive:
+          type: boolean
+        confirm:
+          type: string
+          description: Confirmation copy to show the user. Only present when `destructive` is true.
+        opens_url:
+          type: boolean
+          description: True if the response carries a URL the client should open.
+        url_field:
+          type: string
+          description: Response field name holding the URL to open. Only present when `opens_url` is true.
+          example: "authorization_url"
+        group:
+          type: string
+          description: Optional section heading for grouping actions in a UI.
+        order:
+          type: integer
+          description: Sort key within a tool (and group, if set).
+
     ActionStatus:
       type: string
       enum: [pending, approved, denied, executed, expired, error]

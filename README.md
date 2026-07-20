@@ -31,9 +31,11 @@ This repo contains the OpenAPI and AsyncAPI specifications for the EvilynAI REST
 ## Tool schemas (`tool-details/`)
 
 Per-tool YAML files documenting the data each tool exposes to the frontend
-via the API — specifically `tool_state`, `details`, and `user_actions`. One
-file per tool, plus `base-tool.yaml` describing the fields every tool
-includes by default.
+via the API — specifically `tool_state` and `details`. One file per tool,
+plus `base-tool.yaml` describing the fields every tool includes by default.
+(A tool's admin routes are documented separately, under `server-api/tools/`;
+the declarative admin-action manifest — see `doc/architecture/TOOLS.md` §8 —
+supersedes what used to be hand-maintained here as `user_actions`.)
 
 | File                       | Tool                |
 | -------------------------- | ------------------- |

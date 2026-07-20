@@ -9,8 +9,6 @@ notebook-tool:
         num_notes:
           type: integer
 
-  user_actions: []
-
   details:
     - type: object
       properties:

@@ -15,7 +15,5 @@ calendar-tool:
           items:
             type: string
 
-  user_actions: []
-
   details:
     {}

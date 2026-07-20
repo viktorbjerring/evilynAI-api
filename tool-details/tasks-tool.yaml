@@ -25,10 +25,5 @@ tasks-tool:
           type: [string, "null"]
           description: Reason the backend was unreachable, if any.
 
-  user_actions:
-    - name: user_setup_oauth
-      parameters: {}
-      description: "Run the Google OAuth flow and save the token to disk."
-
   details:
     {}

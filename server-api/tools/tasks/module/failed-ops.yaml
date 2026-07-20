@@ -1,0 +1,51 @@
+get:
+  summary: List failed offline operations (tasks module)
+  description: |
+    Module admin route on the `tasks` module, shared via the common
+    `GoogleHybridModuleMixin`. Lists offline writes that were queued while
+    disconnected and then permanently rejected by Google on replay (as
+    opposed to a transient failure, which is retried). Each entry carries a
+    stable `id` -- use it with `DELETE /failed-ops/{op_id}` -- the original
+    op (`kind` + `args`), the backend `error`, and when it was quarantined.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Quarantined operations
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [failed_operations]
+            properties:
+              failed_operations:
+                type: array
+                items:
+                  type: object
+                  required: [id, kind, args, error, quarantined_at]
+                  properties:
+                    id:
+                      type: string
+                    kind:
+                      type: string
+                      description: The queued operation kind (e.g. 'create', 'update', 'delete').
+                    args:
+                      type: object
+                      additionalProperties: true
+                      description: The original arguments submitted for the operation.
+                    error:
+                      type: string
+                      description: The error Google returned when the op was replayed.
+                    quarantined_at:
+                      type: string
+                      format: date-time
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

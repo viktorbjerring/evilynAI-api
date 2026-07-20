@@ -1,0 +1,49 @@
+delete:
+  summary: Discard a failed offline operation (tasks module)
+  description: |
+    Module admin route on the `tasks` module, shared via the common
+    `GoogleHybridModuleMixin`. Permanently discards one quarantined op (see
+    `GET /failed-ops`), addressed by its `id`. Does not retry it -- this is
+    for abandoning a write that can no longer be corrected.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: op_id
+      in: path
+      required: true
+      schema:
+        type: string
+        description: Quarantined operation id, from `GET /failed-ops`.
+  responses:
+    '200':
+      description: Operation discarded
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, id]
+            properties:
+              status:
+                type: string
+                example: deleted
+              id:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No quarantined operation with that id
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,59 @@
+get:
+  summary: List every declared admin action, across all tool modules
+  description: |
+    Returns the full declarative admin-route manifest: every module admin
+    route annotated with `@admin_action` (see `doc/architecture/TOOLS.md`
+    §8), grouped by tool. This is a client rendering contract, not an
+    LLM-facing one -- it lets clients (the webview, the Android app) build
+    admin UI from a machine-readable catalogue (label, parameter schema,
+    destructive/confirm, whether the response opens a URL, ...) instead of
+    hand-maintaining a hardcoded route list that drifts from the code.
+    Clients are expected to de-duplicate against any bespoke UI they already
+    have for a given route, not the other way around.
+
+    Independent of a tool's enabled/disabled state: module blueprints stay
+    mounted either way, so a disabled tool's admin actions still appear here.
+    Routes with no `@admin_action` declaration (the default admin root, the
+    OAuth browser callback, multipart uploads, ...) are never listed.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Admin-action manifest, grouped by tool
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tools]
+            properties:
+              tools:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: '../openapi.yaml#/components/schemas/AdminAction'
+                example:
+                  schedule:
+                    - tool: schedule
+                      id: schedule.delete_schedule
+                      label: "Cancel schedule"
+                      description: "Cancel an active schedule."
+                      method: DELETE
+                      path: "/api/tools/schedule/module/schedules/{schedule_id}"
+                      parameters:
+                        - name: schedule_id
+                          in: path
+                          type: string
+                          required: true
+                          description: "Schedule id (its label) to cancel."
+                      destructive: true
+                      confirm: "Cancel this schedule permanently?"
+                      opens_url: false
+                      order: 30
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'

@@ -21,7 +21,7 @@ get:
         application/json:
           schema:
             type: object
-            required: [name, enabled, actions]
+            required: [name, enabled, actions, admin_actions]
             properties:
               name:
                 type: string
@@ -49,6 +49,15 @@ get:
                     overridden:
                       type: boolean
                       description: True if the permission has been manually overridden
+              admin_actions:
+                type: array
+                description: >-
+                  This tool's declared admin actions -- the same entries
+                  returned for this tool by `GET /tools/admin-actions`.
+                  Independent of `enabled`: present even for a disabled tool,
+                  since its module blueprint stays mounted either way.
+                items:
+                  $ref: '../../openapi.yaml#/components/schemas/AdminAction'
     '401':
       description: Unauthorized
       content:

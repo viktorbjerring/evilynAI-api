@@ -3,8 +3,8 @@ get:
   description: |
     Module root for the `wordle` game module. Returns the module name plus the
     current game state: status, the round reached, the maximum number of
-    rounds, the scored board so far, and the size of the bundled dictionary.
-    The secret word is never included.
+    rounds, the scored board so far, the size of the bundled dictionary, and the
+    game's lifetime `statistics`. The secret word is never included.
   tags: [module-admin]
   security:
     - bearerAuth: []
@@ -22,7 +22,7 @@ get:
                 example: wordle
               details:
                 type: object
-                required: [game_id, status, round, max_rounds, board, dictionary_size]
+                required: [game_id, status, round, max_rounds, board, dictionary_size, statistics]
                 properties:
                   game_id:
                     type: string
@@ -53,6 +53,22 @@ get:
                             enum: [green, yellow, grey]
                   dictionary_size:
                     type: integer
+                  statistics:
+                    type: object
+                    description: |
+                      Lifetime aggregate for the game (see
+                      `GET .../module/statistics`).
+                    required: [games_played, wins, losses, extra]
+                    properties:
+                      games_played:
+                        type: integer
+                      wins:
+                        type: integer
+                      losses:
+                        type: integer
+                      extra:
+                        type: object
+                        additionalProperties: true
     '401':
       description: Unauthorized
       content:

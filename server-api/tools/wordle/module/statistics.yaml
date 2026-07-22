@@ -1,0 +1,46 @@
+get:
+  summary: Lifetime game statistics (wordle module)
+  description: |
+    Aggregate statistics for the `wordle` game, accumulated across every
+    resolved game. Registered by the shared game base
+    (`GameModule`), so every game module exposes this route uniformly. The base
+    owns the generic counters (`games_played`, `wins`, `losses`); the `extra`
+    map carries game-specific aggregates — for Wordle: the win `guess_distribution`
+    (guesses-to-solve → count), the `current_streak`, and the `max_streak`.
+    Statistics are recorded automatically when a game resolves; there is no
+    write route.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Lifetime aggregate statistics for the game.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [games_played, wins, losses, extra]
+            properties:
+              games_played:
+                type: integer
+                description: Total number of games that have resolved.
+              wins:
+                type: integer
+              losses:
+                type: integer
+              extra:
+                type: object
+                description: |
+                  Game-specific aggregates. For Wordle: `guess_distribution`
+                  (object keyed by guesses-to-solve), `current_streak`, and
+                  `max_streak`.
+                additionalProperties: true
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -3,7 +3,7 @@ get:
   description: |
     Module root for the `wordle` game module. Returns the module name plus the
     current game state: status, the round reached, the maximum number of
-    rounds, the scored board so far, the size of the bundled dictionary, and the
+    rounds, the scored board so far, the size of the live dictionary, and the
     game's lifetime `statistics`. The secret word is never included.
   tags: [module-admin]
   security:

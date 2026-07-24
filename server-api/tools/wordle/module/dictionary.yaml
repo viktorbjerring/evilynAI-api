@@ -1,0 +1,149 @@
+get:
+  summary: Read the Wordle dictionary (wordle module)
+  description: |
+    Module admin route proxied to the `wordle` tool. Returns the live word list
+    the game validates secrets and guesses against, sorted alphabetically, plus
+    its size.
+
+    The dictionary is a writable file (default `<data_dir>/words.txt`,
+    overridable via the module's `dictionary_path` config key). On first use it
+    is seeded from the word list bundled with the module; thereafter it can be
+    edited via `POST /dictionary` without redeploying. The secret word of any
+    in-progress game is never included.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The current dictionary.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [words, dictionary_size]
+            properties:
+              words:
+                type: array
+                description: Every legal five-letter word, sorted alphabetically.
+                items:
+                  type: string
+              dictionary_size:
+                type: integer
+                description: Number of words in the dictionary.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+post:
+  summary: Edit the Wordle dictionary (wordle module)
+  description: |
+    Module admin route proxied to the `wordle` tool. Adds and/or removes words
+    from the live dictionary — it mutates the existing list rather than
+    replacing it — and persists the result to the dictionary file for immediate
+    use by the running game.
+
+    Supply `add` and/or `remove`, each a word list (a `text`-style blob of
+    words separated by newlines or whitespace is also accepted). Each `add`
+    entry is normalised (trimmed, lowercased) and folded in only if it is a
+    legal five-letter alphabetic word — any others are returned in `rejected`,
+    and words already present are ignored (not reported in `added`). Each
+    `remove` entry is normalised and dropped if currently present; entries not
+    in the dictionary are ignored. If the edit would leave the dictionary empty
+    it is left unchanged and the route responds `400`, so the game can never be
+    left with an empty dictionary.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          description: Provide `add` and/or `remove` (at least one is required).
+          properties:
+            add:
+              description: |
+                Words to add — either an array of words or a single string of
+                words separated by whitespace/newlines. Non-legal entries are
+                reported in `rejected`.
+              oneOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+            remove:
+              description: |
+                Words to remove (ignored if not currently present) — an array
+                of words or a whitespace/newline-separated string.
+              oneOf:
+                - type: array
+                  items:
+                    type: string
+                - type: string
+  responses:
+    '200':
+      description: Dictionary edited.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, dictionary_size, added, removed, rejected]
+            properties:
+              status:
+                type: string
+                enum: [updated]
+              dictionary_size:
+                type: integer
+                description: Number of words in the dictionary after the edit.
+              added:
+                type: array
+                description: Words newly added (excludes ones already present).
+                items:
+                  type: string
+              removed:
+                type: array
+                description: Words actually removed (excludes ones not present).
+                items:
+                  type: string
+              rejected:
+                type: array
+                description: '`add` entries that were not legal five-letter words.'
+                items:
+                  type: string
+    '400':
+      description: |
+        The edit was rejected: nothing to add or remove (neither supplied, or
+        both empty), or it would empty the dictionary. In every case the
+        dictionary is left unchanged. Always the same shape (`status: invalid`
+        with a `message`).
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, message]
+            properties:
+              status:
+                type: string
+                enum: [invalid]
+              message:
+                type: string
+              rejected:
+                type: array
+                description: Present when the rejection followed an empty-dictionary guard.
+                items:
+                  type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

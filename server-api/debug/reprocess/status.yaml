@@ -1,0 +1,61 @@
+get:
+  summary: Get weekly memory-consolidation last-run status
+  description: |
+    Returns the outcome of the most recent long-term-memory reprocessing pass
+    (tier 2 consolidation). `last_status` is `"never"` if the pass has never
+    run. `last_result` carries the run's own statistics and is `null` when the
+    pass has never run or ended in an error.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Reprocess status
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [last_status]
+            properties:
+              last_run:
+                type: string
+                format: date-time
+                nullable: true
+                description: ISO timestamp of the last completed run, or null if never run
+              last_status:
+                type: string
+                enum: [never, ok, error]
+                description: Outcome of the last run
+              last_result:
+                type: object
+                nullable: true
+                description: Statistics from the last successful run
+                properties:
+                  pivots:
+                    type: integer
+                    description: Memories examined as the pivot of an iteration
+                  merges:
+                    type: integer
+                    description: Pairs collapsed into a newly synthesised memory
+                  supersessions:
+                    type: integer
+                    description: Pairs where one memory superseded the other
+                  settled:
+                    type: integer
+                    description: Pivots that found no merge/supersede partner
+                  errors:
+                    type: integer
+                    description: Pivots settled because merge synthesis failed
+                  remaining:
+                    type: integer
+                    description: >
+                      Memories still queued for reprocessing — non-zero only if
+                      the run hit its iteration cap
+                  active_before:
+                    type: integer
+                    description: Live (non-superseded) memories before the run
+                  active_after:
+                    type: integer
+                    description: Live (non-superseded) memories after the run
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

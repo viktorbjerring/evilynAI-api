@@ -1,0 +1,34 @@
+post:
+  summary: Trigger the weekly long-term-memory consolidation pass
+  description: |
+    Posts a `ReprocessTrigger` to the internal bus and returns immediately.
+    The pass (tier 2 of memory consolidation) runs asynchronously on the AI's
+    trigger-consumer thread — the same thread the dream runs on, so the two can
+    never overlap.
+
+    It drains every long-term memory still flagged as needing reprocessing,
+    merging or superseding duplicates that the nightly write path cannot see.
+    The scheduler posts the same trigger automatically on its configured
+    weekday; this endpoint is the manual "run now".
+
+    The first run against a store that has never been consolidated drains the
+    entire backlog and can take a long time (one or two LLM calls per judged
+    pair). Poll `GET /api/debug/reprocess/status` for the outcome.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Trigger queued
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [queued]
+                example: "queued"
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

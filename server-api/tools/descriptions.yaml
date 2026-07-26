@@ -1,0 +1,200 @@
+get:
+  summary: List every AI-facing description, per tool and per action
+  description: |
+    Returns the effective description of every registered tool and of each of
+    its actions, alongside the default declared in source.
+
+    These are the two texts the AI selects on: the tool description is what it
+    reads in the toolset overview when choosing a tool, and each action
+    description is what it reads once drilled into that tool. Both are the knobs
+    to tune when the wrong tool — or the wrong action on the right tool — keeps
+    getting picked.
+
+    Disabled tools and hidden (`disabled` / `system_only`) actions are included:
+    their descriptions can still be edited, and the overrides are kept for when
+    they become reachable again.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Description snapshot for every tool and action
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [descriptions]
+            properties:
+              descriptions:
+                type: array
+                items:
+                  type: object
+                  required: [tool, description, default, overridden, actions]
+                  properties:
+                    tool:
+                      type: string
+                      example: "notebook"
+                    description:
+                      type: string
+                      description: Effective tool description shown to the AI
+                    default:
+                      type: string
+                      description: Description declared in the tool's source
+                    overridden:
+                      type: boolean
+                      description: True when an override is active
+                    actions:
+                      type: array
+                      description: >-
+                        This tool's actions and their descriptions. Empty for a
+                        tool with no actions.
+                      items:
+                        type: object
+                        required: [tool, action, description, default, overridden]
+                        properties:
+                          tool:
+                            type: string
+                            example: "notebook"
+                          action:
+                            type: string
+                            example: "write"
+                          description:
+                            type: string
+                            description: Effective action description
+                          default:
+                            type: string
+                            description: >-
+                              Description declared in source (the action's
+                              docstring or its `@action` description)
+                          overridden:
+                            type: boolean
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+post:
+  summary: Set or clear a description override on a tool or one of its actions
+  description: |
+    Replaces the AI-facing description of one tool, or — when `action` is given —
+    of one action on that tool. The new text takes effect on the next inference
+    and is persisted, so it survives a restart and a toolset reload.
+
+    Omit `action` (or send it as `null`) to target the tool's own description,
+    the text that decides which tool the AI reaches for. Include it to target
+    that action's description, which decides what the AI calls once inside the
+    tool. Hidden (`disabled` / `system_only`) actions can be reworded too — a
+    `system_only` action's description still reaches the AI when it is forced.
+
+    Pass `description: null` (or a blank string) to clear the override and
+    restore the description declared in source. Sending exactly the default text
+    also counts as clearing it. Leading/trailing whitespace is stripped.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [tool, description]
+          properties:
+            tool:
+              type: string
+              example: "notebook"
+            action:
+              type: string
+              nullable: true
+              description: >-
+                Short action name (e.g. `write`) to override that action's
+                description instead of the tool's. Omit for the tool itself.
+              example: "write"
+            description:
+              type: string
+              nullable: true
+              description: New description, or `null` to clear the override
+              example: "Long-form notes only — not for reminders or to-dos."
+  responses:
+    '200':
+      description: |
+        Description applied (or cleared). The body carries `action` only when
+        an action was targeted; a tool-level change returns the tool entry,
+        including its `actions` array.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                title: Tool description
+                required: [tool, description, default, overridden, actions]
+                properties:
+                  tool:
+                    type: string
+                  description:
+                    type: string
+                    description: Effective description after the change
+                  default:
+                    type: string
+                  overridden:
+                    type: boolean
+                  actions:
+                    type: array
+                    items:
+                      type: object
+              - type: object
+                title: Action description
+                required: [tool, action, description, default, overridden]
+                properties:
+                  tool:
+                    type: string
+                  action:
+                    type: string
+                  description:
+                    type: string
+                    description: Effective description after the change
+                  default:
+                    type: string
+                  overridden:
+                    type: boolean
+    '400':
+      description: Missing `tool`/`description`, or a non-string description
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Tool not found, or `action` not found on that tool
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '503':
+      description: Toolset not configured
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

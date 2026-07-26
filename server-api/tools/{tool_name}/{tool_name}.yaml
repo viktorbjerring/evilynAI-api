@@ -4,6 +4,10 @@ get:
     Returns the tool's metadata, all its actions with their full JSON Schema
     parameter definitions, and the effective permission for each action
     (including any active overrides).
+
+    `description` is the effective AI-facing text and `default_description` is
+    what is declared in source — reported both for the tool and for each of its
+    actions. Use `POST /tools/descriptions` to change either.
   tags: [tools]
   security:
     - bearerAuth: []
@@ -28,6 +32,14 @@ get:
               description:
                 type: string
                 nullable: true
+                description: Effective AI-facing description (override applied)
+              default_description:
+                type: string
+                nullable: true
+                description: Description declared in the tool's source
+              description_overridden:
+                type: boolean
+                description: True when a description override is active
               enabled:
                 type: boolean
                 nullable: true
@@ -40,12 +52,36 @@ get:
                     name:
                       type: string
                       example: "notebook_write"
+                    action_name:
+                      type: string
+                      description: Short action name, as used by the override endpoints
+                      example: "write"
                     description:
                       type: string
+                      description: Effective action description (override applied)
+                    default_description:
+                      type: string
+                      description: Description declared in source
+                    description_overridden:
+                      type: boolean
+                      description: >-
+                        True when this action's description has been
+                        overridden (see `POST /tools/descriptions`)
+                    parameters:
+                      type: object
+                      additionalProperties: true
+                      description: JSON Schema for the action's parameters
                     permission:
                       type: string
-                      enum: [immediate, requires_approval, disabled]
-                      description: Effective permission (default or overridden)
+                      enum: [immediate, requires_approval, disabled, system_only]
+                      description: >-
+                        Effective permission (default or overridden). Every
+                        action is listed, including hidden `disabled` /
+                        `system_only` ones.
+                    default_permission:
+                      type: string
+                      enum: [immediate, requires_approval, disabled, system_only]
+                      description: Permission declared in source
                     overridden:
                       type: boolean
                       description: True if the permission has been manually overridden

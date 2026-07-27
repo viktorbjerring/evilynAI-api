@@ -1,0 +1,84 @@
+post:
+  summary: Apply a collapse to a hand-picked memory pair
+  description: |
+    Collapses two memories picked by id. `action` selects how:
+
+    - `auto` (default) — judge the pair, then apply whatever the judge decides.
+      A `complement`/`unknown` verdict applies nothing.
+    - `merge` — synthesise a combined node and supersede both inputs into it.
+    - `supersede` — keep the more recent memory, supersede the other into it.
+
+    An explicit `merge`/`supersede` is an operator override: it applies
+    regardless of the collapse floor that the automatic weekly pass honours,
+    because the operator, not the model, made the call. `a_id` and `b_id` must
+    be distinct.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [a_id, b_id]
+          properties:
+            a_id:
+              type: integer
+            b_id:
+              type: integer
+            action:
+              type: string
+              enum: [auto, merge, supersede]
+              default: auto
+  responses:
+    '200':
+      description: The resulting collapse
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [result_id, action, superseded]
+            properties:
+              result_id:
+                type: integer
+                nullable: true
+                description: >
+                  Id of the surviving memory (the synthesised node for a merge,
+                  the winner for a supersede), or null when `auto` judged the
+                  pair as complement/unknown and applied nothing.
+              action:
+                type: string
+                enum: [merge, supersede, complement, unknown]
+                description: >
+                  The action actually taken. For an `auto` no-op this echoes the
+                  judge verdict (`complement`/`unknown`).
+              superseded:
+                type: array
+                items:
+                  type: integer
+                description: Ids that were superseded by this collapse.
+    '400':
+      description: >
+        A required id is missing/not an integer, the two ids are equal, or the
+        action is invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '404':
+      description: Either id is unknown
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

@@ -1,0 +1,80 @@
+get:
+  summary: List stored long-term memories (operator inspection)
+  description: |
+    Returns the persisted long-term memory set, id-ordered. Active memories
+    only unless `include_superseded` is true. Each row carries `created_at`,
+    `reprocessed`, and `superseded_by` in addition to the memory fields; the
+    embedding vector is deliberately omitted.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: include_superseded
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+      description: Include memories that have been superseded by another memory.
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+      description: Maximum number of memories to return (default all).
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+      description: Number of leading rows to skip. Only honoured together with `limit`.
+  responses:
+    '200':
+      description: The stored memory set
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [count, memories]
+            properties:
+              count:
+                type: integer
+                description: Number of memories in this response.
+              memories:
+                type: array
+                items:
+                  type: object
+                  required:
+                    [id, category, subject, content, confidence, source_date,
+                     created_at, reprocessed, superseded_by]
+                  properties:
+                    id:
+                      type: integer
+                    category:
+                      type: string
+                    subject:
+                      type: string
+                    content:
+                      type: string
+                    confidence:
+                      type: number
+                      format: float
+                    source_date:
+                      type: string
+                      format: date
+                    created_at:
+                      type: string
+                    reprocessed:
+                      type: integer
+                      description: >
+                        Weekly-consolidation queue flag — 0 = still queued,
+                        1 = settled.
+                    superseded_by:
+                      type: integer
+                      nullable: true
+                      description: >
+                        Id of the memory that replaced this one, or null when
+                        the memory is active.
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'

@@ -1,0 +1,40 @@
+delete:
+  summary: Hard-delete a long-term memory
+  description: |
+    Removes the memory and its embedding. Any memory that pointed at this one
+    via `superseded_by` is revived (its pointer cleared) so it is not stranded.
+    Nothing else is cascaded.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: memory_id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Id of the memory to delete.
+  responses:
+    '200':
+      description: The memory was deleted
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [deleted]
+            properties:
+              deleted:
+                type: integer
+                description: Id of the deleted memory.
+    '404':
+      description: No memory with that id exists
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

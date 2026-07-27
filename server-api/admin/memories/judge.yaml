@@ -1,0 +1,64 @@
+post:
+  summary: Judge a hand-picked memory pair (no change)
+  description: |
+    Runs the shared consolidation judge over two memories picked by id and
+    reports the cosine similarity and the verdict, **without applying anything**.
+    The inspection counterpart to `POST /api/admin/memories/collapse` — use it to
+    preview what a collapse would decide. `a_id` and `b_id` must be distinct.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [a_id, b_id]
+          properties:
+            a_id:
+              type: integer
+            b_id:
+              type: integer
+  responses:
+    '200':
+      description: Similarity and verdict for the pair
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [a_id, b_id, similarity, verdict]
+            properties:
+              a_id:
+                type: integer
+              b_id:
+                type: integer
+              similarity:
+                type: number
+                format: float
+                description: Cosine similarity of the two embeddings.
+              verdict:
+                type: string
+                enum: [merge, supersede, complement, unknown]
+    '400':
+      description: A required id is missing, not an integer, or the two ids are equal
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '404':
+      description: Either id is unknown
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

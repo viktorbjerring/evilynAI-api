@@ -1,0 +1,83 @@
+post:
+  summary: Hand-write a long-term memory
+  description: |
+    Embeds and inserts an operator-authored long-term memory. The memory lands
+    flagged for the next weekly consolidation pass (`reprocessed = 0`), so it is
+    reconsidered alongside everything else.
+
+    This route calls the AI facade directly rather than posting a trigger — it
+    is out-of-band operator maintenance, not part of the inbound-trigger
+    conversation.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [content, subject, category]
+          properties:
+            content:
+              type: string
+              description: The memory text, stated as a plain fact.
+            subject:
+              type: string
+              description: Short label (2-5 words) identifying the topic.
+            category:
+              type: string
+              enum: [personal, preference, event, pattern, relationship, opinion]
+              description: One of the memory category vocabulary values.
+            confidence:
+              type: number
+              format: float
+              default: 1.0
+            source_date:
+              type: string
+              format: date
+              description: >
+                Date the fact was observed (YYYY-MM-DD). Defaults to today; pass
+                it for a historical memory. It is what future consolidation
+                compares to decide supersede ordering.
+  responses:
+    '201':
+      description: The created memory
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [memory]
+            properties:
+              memory:
+                type: object
+                required: [id, subject, content, category, confidence]
+                properties:
+                  id:
+                    type: integer
+                  subject:
+                    type: string
+                  content:
+                    type: string
+                  category:
+                    type: string
+                  confidence:
+                    type: number
+                    format: float
+                  relevance:
+                    type: number
+                    format: float
+    '400':
+      description: >
+        A required field is missing, `confidence` is not a number, or the
+        category is not one of the known values.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

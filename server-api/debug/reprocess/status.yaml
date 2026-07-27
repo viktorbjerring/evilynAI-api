@@ -56,6 +56,12 @@ get:
                     description: >
                       Verdicts the judge could not reach or parse; a high share
                       relative to `judgements` indicates a broken judge
+                  floored:
+                    type: integer
+                    description: >
+                      Merge/supersede verdicts refused by the collapse floor
+                      (`merge_min_similarity`) because the pair's similarity was
+                      too low to act on; a high count suggests lowering the floor
                   settled:
                     type: integer
                     description: Pivots that found no merge/supersede partner
@@ -70,8 +76,11 @@ get:
                   remaining:
                     type: integer
                     description: >
-                      Memories still queued for reprocessing — non-zero only if
-                      the run hit its iteration cap or aborted early
+                      Memories still queued for reprocessing. Includes nodes
+                      deferred to the next run, so a clean run in which any
+                      merge or supersede occurred reports a non-zero value; it
+                      is non-zero *without* any collapse only when the run hit
+                      its iteration cap or aborted early.
                   active_before:
                     type: integer
                     description: Live (non-superseded) memories before the run

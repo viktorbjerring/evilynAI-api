@@ -25,7 +25,12 @@ get:
               last_status:
                 type: string
                 enum: [never, ok, error]
-                description: Outcome of the last run
+                description: >
+                  Outcome of the last run. `"ok"` means the pass returned
+                  without raising; it does NOT guarantee the queue was fully
+                  drained — a run that stopped early on the broken-judge guard
+                  also reports `"ok"`. Check `last_result.aborted` to
+                  distinguish a full drain from an early bail-out.
               last_result:
                 type: object
                 nullable: true
@@ -34,23 +39,39 @@ get:
                   pivots:
                     type: integer
                     description: Memories examined as the pivot of an iteration
+                  judgements:
+                    type: integer
+                    description: Pairwise judge calls made across all pivots
                   merges:
                     type: integer
                     description: Pairs collapsed into a newly synthesised memory
                   supersessions:
                     type: integer
                     description: Pairs where one memory superseded the other
+                  complement:
+                    type: integer
+                    description: Verdicts that kept both memories as distinct facts
+                  unknown:
+                    type: integer
+                    description: >
+                      Verdicts the judge could not reach or parse; a high share
+                      relative to `judgements` indicates a broken judge
                   settled:
                     type: integer
                     description: Pivots that found no merge/supersede partner
                   errors:
                     type: integer
                     description: Pivots settled because merge synthesis failed
+                  aborted:
+                    type: boolean
+                    description: >
+                      True if the run stopped early because the unknown-verdict
+                      rate crossed the broken-judge abort threshold
                   remaining:
                     type: integer
                     description: >
                       Memories still queued for reprocessing — non-zero only if
-                      the run hit its iteration cap
+                      the run hit its iteration cap or aborted early
                   active_before:
                     type: integer
                     description: Live (non-superseded) memories before the run

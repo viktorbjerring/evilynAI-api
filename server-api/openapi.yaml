@@ -153,10 +153,44 @@ components:
       type: object
       description: >-
         Editable AI-subsystem tuning settings, mirroring `AIConfig`. Used
-        both as the full object (`GET /admin/config`) and, on
+        both as the full object (`GET /admin/config`, which reports the
+        effective value of every field -- the persisted one, or the built-in
+        default where the settings file is silent) and, on
         `PATCH /admin/config`, as a partial nested object containing only
         the fields to change.
       properties:
+        inference:
+          type: object
+          description: >-
+            Two-phase (thinking) inference prompt strings (`InferenceConfig`).
+            The one section applied **live** by `PATCH /admin/config` -- the
+            engine swaps these mid-flight, so prompt tuning needs no restart.
+            Each string must be non-blank and at most 8000 characters.
+          properties:
+            thinking_suffix:
+              type: string
+              description: >-
+                System-prompt suffix for the thinking phase. Frames the phase as
+                private note-taking, and frames the exit as having nothing
+                further to work out rather than being ready to reply.
+            answer_suffix:
+              type: string
+              description: >-
+                System-prompt suffix for the answer phase. Asserts that the
+                final turn is Evilyn's own private reasoning, that the user has
+                not seen any of it, and that the message she is about to write
+                is the first thing they read. That assertion is correctness
+                rather than tuning -- an override that drops it reintroduces the
+                answer phase mistaking its reasoning for a delivered reply.
+            answer_prompt:
+              type: string
+              description: >-
+                The one-line imperative cue closing the answer phase's user
+                turn, rendered immediately after the private-reasoning block.
+                Keeps a compressed form of the not-yet-seen assertion, so
+                overriding one of the two strings cannot remove it entirely.
+                Must not be empty -- a bare block of notes with no instruction
+                leaves the model to infer its task from the system prompt alone.
         ltm:
           type: object
           description: Long-term memory tuning (`LTMConfig`).
@@ -272,6 +306,10 @@ components:
               type: boolean
               description: Whether a missed nightly run fires immediately on server boot.
       example:
+        inference:
+          answer_prompt: >-
+            Those were your private notes, which the user has not seen. Now
+            write your actual response to them, as Evilyn.
         ltm:
           vs_search_count: 10
           wm_max_size: 40

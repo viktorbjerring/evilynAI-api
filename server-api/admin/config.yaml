@@ -1,8 +1,14 @@
 get:
   summary: Get current AI subsystem config
   description: |
-    Returns the editable AI subsystem tuning settings currently persisted in
-    the server's `AI_SETTINGS` JSON file (see `AIConfig`).
+    Returns the **effective** editable AI subsystem tuning settings (see
+    `AIConfig`): for every field in the editable allowlist, the value persisted
+    in the server's `AI_SETTINGS` JSON file, or the built-in default where the
+    file is silent.
+
+    That distinction matters for the `inference` prompt strings, which are
+    usually defaults — a read that reported only what happens to be persisted
+    would show them as absent and be useless for tuning.
   tags: [admin]
   security:
     - bearerAuth: []
@@ -34,10 +40,23 @@ patch:
     `ConfigSettings`: only the fields being changed need to be present, and
     they are merged into the existing settings.
 
-    Updates are written to disk only -- there is no live reload. The
-    running process keeps its current in-memory config until the server is
-    restarted, hence `"applied": false` and `"restart_required": true` on
-    every successful response.
+    Applying is **per section**. Every patch is written to disk; in addition,
+    the `inference` section is handed straight to the running AI subsystem —
+    its prompt strings are a plain dataclass the engine can swap mid-flight, so
+    prompt tuning takes effect immediately and a run already in progress
+    finishes on the old values. Every other section stays disk-only and takes
+    effect on the next server restart.
+
+    The response reports both sides: `applied_sections` are the sections that
+    went live, `restart_sections` those still awaiting a restart. `applied` is
+    `true` when at least one section went live; `restart_required` is `true`
+    while any touched section still needs a restart. So a pure `inference`
+    patch reports `applied: true, restart_required: false`, a mixed patch
+    reports both `true`, and an empty (no-op) patch reports both `false`.
+
+    A live-appliable section whose subsystem is unavailable — no inference
+    engine, i.e. the server was started without tools — is reported as *not*
+    applied and falls back into `restart_sections`.
   tags: [admin]
   security:
     - bearerAuth: []
@@ -48,29 +67,51 @@ patch:
         schema:
           $ref: '../openapi.yaml#/components/schemas/ConfigSettings'
         example:
+          inference:
+            answer_prompt: >-
+              Those were your private notes, which the user has not seen. Now
+              write your actual response to them, as Evilyn.
           short_term:
             transcript:
               max_tokens: 4000
-          scheduler:
-            schedule_hour: 4
   responses:
     '200':
       description: >-
-        Update validated and persisted to the `AI_SETTINGS` file. Not yet
-        applied to the running process.
+        Update validated and persisted to the `AI_SETTINGS` file, and applied
+        live for every live-appliable section it touched.
       content:
         application/json:
           schema:
             type: object
-            required: [applied, restart_required, updated]
+            required:
+              - applied
+              - restart_required
+              - applied_sections
+              - restart_sections
+              - updated
             properties:
               applied:
                 type: boolean
-                enum: [false]
-                description: Always `false` -- changes take effect on the next server restart, not live.
+                description: >-
+                  `true` when at least one touched section was applied to the
+                  running process (today: `inference`).
               restart_required:
                 type: boolean
-                enum: [true]
+                description: >-
+                  `true` while any touched section is still disk-only and needs
+                  a restart to take effect.
+              applied_sections:
+                type: array
+                description: Sections applied to the running process, sorted.
+                items:
+                  type: string
+                example: [inference]
+              restart_sections:
+                type: array
+                description: Touched sections that still need a restart, sorted.
+                items:
+                  type: string
+                example: [short_term]
               updated:
                 allOf:
                   - $ref: '../openapi.yaml#/components/schemas/ConfigSettings'
@@ -90,6 +131,7 @@ patch:
                 example:
                   - "Unknown field: 'ltm.bogus_field'"
                   - "'scheduler.schedule_hour' must be between 0 and 23"
+                  - "inference.answer_prompt must not be blank"
     '401':
       $ref: '../openapi.yaml#/components/responses/Unauthorized'
     '409':

@@ -1,0 +1,93 @@
+get:
+  summary: Get the last rendered answer-phase call
+  description: |
+    Returns the system prompt and message array the two-phase run's **answer
+    phase** was last handed, exactly as the provider received them.
+
+    This is the direct read for confirming that the round's reasoning is
+    contained as *data* rather than replayed as dialogue: the message array must
+    contain no `assistant` turn and no `tool_use` block, and the round's
+    reasoning must appear as a delimited block inside the final `user` turn,
+    followed by the answer cue.
+
+    Only the two-phase answer call is recorded — a single-pass run has no
+    separate answer phase. The last call only is kept, in memory, and it is
+    never written to disk: it carries the full private reasoning and every tool
+    result of that turn. `call` is `null` before the first two-phase run, and
+    when inference is unconfigured.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The last answer-phase call, or `null` if none has run.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [call]
+            properties:
+              call:
+                type: object
+                nullable: true
+                required: [timestamp, system_prompt, messages, tools, thinking_outcome]
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: When the call was rendered.
+                  system_prompt:
+                    type: string
+                    description: >-
+                      The full rendered system prompt, ending in the
+                      answer-phase suffix (`inference.answer_suffix`).
+                  messages:
+                    type: array
+                    description: >-
+                      The provider message array. Every entry is a plain
+                      `{role, content}` object; the final one is the `user` turn
+                      carrying the private-reasoning block and the answer cue.
+                    items:
+                      type: object
+                      properties:
+                        role:
+                          type: string
+                          description: >-
+                            `user`, or `system` for a framed system message
+                            carried over from a prior module turn. An
+                            `assistant` role appearing here means containment
+                            has regressed.
+                        content:
+                          type: string
+                  tools:
+                    type: object
+                    nullable: true
+                    description: >-
+                      Always `null` — the answer phase is tool-free.
+                  thinking_outcome:
+                    type: string
+                    enum: [completed, truncated]
+                    description: >-
+                      Whether the thinking phase reached `end_turn` or hit the
+                      tool-iteration cap, in which case the reasoning this
+                      answer was built from is partial.
+          example:
+            call:
+              timestamp: '2026-05-17T09:30:12.481000'
+              system_prompt: "Current time: Sunday, 17 May 2026, 09:30\n\n…\n\nYou are now writing your reply. …"
+              messages:
+                - role: user
+                  content: what is on friday
+                - role: user
+                  content: |-
+                    [PRIVATE REASONING]
+                    thought: she wants friday; check the calendar
+                    called:  calendar-list_events(day=friday)
+                    result:  calendar-list_events -> dentist 10:00, standup 09:30
+                    [END PRIVATE REASONING]
+
+                    Those were your private notes, which the user has not seen. Now write your actual response to them, as Evilyn.
+              tools: null
+              thinking_outcome: completed
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

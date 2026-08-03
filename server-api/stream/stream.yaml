@@ -1,5 +1,5 @@
 get:
-  summary: Open SSE event stream
+  summary: Open SSE event stream (subscribe)
   description: |
     Opens a persistent Server-Sent Events connection. The server pushes events
     as they occur. Keep-alive comments (`: keep-alive`) are sent every 5 seconds
@@ -13,6 +13,28 @@ get:
     event: <type>
     data: <JSON payload>
     ```
+
+    **Client id.** Every subscription is registered under a client id. Pass
+    `?client_id=` to choose it, or omit it and the server mints a UUID. Either
+    way the first frame on the stream is a `connected` event carrying the id:
+
+    ```
+    event: connected
+    data: {"client_id": "…", "timestamp": "…"}
+    ```
+
+    That id is what `POST /stream/unsubscribe` takes.
+
+    **Deduplication.** A client id maps to at most one live connection. Opening
+    a stream with an id that is already registered evicts the previous
+    connection — its stream is closed server-side — so a client reconnecting
+    with a stable id replaces its old subscription instead of stacking a second
+    one, and events are never delivered to it twice.
+
+    **Disconnect handling.** A stream that closes normally is unregistered
+    within one keep-alive tick. Clients that vanish abruptly (network dropped,
+    device slept) are detected by TCP keepalive on the server socket, roughly
+    35 seconds after the peer goes silent.
   tags: [stream]
   security:
     - bearerAuth: []
@@ -23,6 +45,17 @@ get:
       schema:
         type: string
       description: JWT token (alternative to Authorization header, for EventSource)
+    - name: client_id
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 128
+      description: |
+        Client-chosen subscription id. Must be non-empty, at most 128
+        characters, and free of control characters. Reusing an id evicts the
+        connection currently registered under it. Omit to have the server mint
+        a UUID.
   responses:
     '200':
       description: SSE stream opened
@@ -30,7 +63,17 @@ get:
         text/event-stream:
           schema:
             type: string
-            description: Stream of SSE events
+            description: Stream of SSE events, opening with a `connected` event
+    '400':
+      description: Malformed `client_id` (empty, too long, or non-printable)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Invalid client_id
     '401':
       description: Unauthorized
       content:

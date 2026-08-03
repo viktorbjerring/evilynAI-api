@@ -1,0 +1,95 @@
+post:
+  summary: End an SSE subscription (unsubscribe)
+  description: |
+    Explicitly ends the subscription registered under `client_id`, closing that
+    client's stream server-side if it is still open. The counterpart to the
+    implicit unsubscribe of simply closing the `GET /stream` connection.
+
+    Use it to release a subscription deterministically — on page unload
+    (`navigator.sendBeacon`, which is POST-only), when switching devices, or to
+    clear a registration whose socket is already gone.
+
+    The id is the one announced in the stream's opening `connected` event, or
+    the one the client supplied as `?client_id=` when subscribing.
+
+    **Authentication:** Accepts a Bearer token via `Authorization` header **or**
+    via `?token=` query parameter, so it stays reachable from `sendBeacon`,
+    which cannot set headers.
+
+    The id may be given in the JSON body or as a `?client_id=` query parameter;
+    the body wins when both are present. `sendBeacon` sends neither a JSON
+    content type nor headers, so it uses the query form for both values.
+  tags: [stream]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: token
+      in: query
+      required: false
+      schema:
+        type: string
+      description: JWT token (alternative to Authorization header, for sendBeacon)
+    - name: client_id
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Subscription id to end (alternative to the JSON body)
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            client_id:
+              type: string
+              description: Subscription id to end
+          example:
+            client_id: 3f1c9a02-6f4e-4a7f-9a1e-2b7c5d0e8a11
+  responses:
+    '200':
+      description: Subscription ended
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: ok
+              client_id:
+                type: string
+    '400':
+      description: |
+        Missing `client_id` (`client_id is required`), or one that is malformed
+        by the same rule the subscribe path applies — too long or carrying
+        control characters (`Invalid client_id`). A malformed id can never have
+        been registered, so it is reported as malformed rather than unknown.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: client_id is required
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No subscription registered under that `client_id`
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Client not subscribed

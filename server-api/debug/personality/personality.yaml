@@ -1,0 +1,49 @@
+get:
+  summary: View core personality traits
+  description: |
+    Returns the persistent personality layer — every trait the store holds,
+    flattened across sections into one list. This is the read the inference
+    path is built on; for the operator view that carries each trait's `id`,
+    `section`, and `category` (and which the write routes address), use
+    `GET /debug/personality/traits`.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Personality traits
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [traits]
+            properties:
+              traits:
+                type: array
+                items:
+                  type: object
+                  required:
+                    [content, confidence, evidence_count, first_observed,
+                     last_reinforced]
+                  properties:
+                    content:
+                      type: string
+                    confidence:
+                      type: number
+                      format: float
+                    evidence_count:
+                      type: integer
+                    first_observed:
+                      type: string
+                      format: date-time
+                    last_reinforced:
+                      type: string
+                      format: date-time
+                    trait_id:
+                      type: integer
+                      nullable: true
+                      description: >
+                        Row id of the trait, or null for a trait that has not
+                        been persisted yet.
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

@@ -1,0 +1,97 @@
+get:
+  summary: List stored personality traits (operator inspection)
+  description: |
+    Returns the personality trait store as a flat, id-addressed list — the view
+    the `/admin/personality/traits` write routes act on. Unlike
+    `GET /debug/personality`, every row carries its `id`, `section`, and
+    `category`, and traits below the inference confidence floor are included.
+
+    Rows are ordered by section, then category, then confidence descending. The
+    filters match on the stored strings rather than the current category
+    vocabulary, so rows written under a retired category (for example the
+    withdrawn `relationship.shared_history`) still list here even though the
+    trait snapshot no longer loads them.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: section
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [traits, relationship, behaviour]
+      description: Only return traits stored under this section.
+    - name: category
+      in: query
+      required: false
+      schema:
+        type: string
+      description: >
+        Only return traits stored under this category. Matched as a plain
+        string, so a retired category can still be listed.
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+      description: Maximum number of traits to return (default all).
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+      description: Number of leading rows to skip. Only honoured together with `limit`.
+  responses:
+    '200':
+      description: The stored trait set
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [count, traits]
+            properties:
+              count:
+                type: integer
+                description: Number of traits in this response.
+              traits:
+                type: array
+                items:
+                  type: object
+                  required:
+                    [id, section, category, content, confidence, evidence_count,
+                     first_observed, last_reinforced]
+                  properties:
+                    id:
+                      type: integer
+                      description: >
+                        Row id, stable across consolidation passes for as long
+                        as the trait survives. Use it with
+                        `DELETE /admin/personality/traits/{trait_id}`.
+                    section:
+                      type: string
+                      enum: [traits, relationship, behaviour]
+                    category:
+                      type: string
+                    content:
+                      type: string
+                    confidence:
+                      type: number
+                      format: float
+                    evidence_count:
+                      type: integer
+                      description: >
+                        How many times the trait has been reinforced by the
+                        nightly consolidation pass.
+                    first_observed:
+                      type: string
+                      format: date-time
+                    last_reinforced:
+                      type: string
+                      format: date-time
+                      description: >
+                        Drives decay — a trait unreinforced for long enough
+                        loses confidence and eventually drops.
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

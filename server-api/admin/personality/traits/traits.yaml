@@ -1,0 +1,104 @@
+post:
+  summary: Hand-write a personality trait
+  description: |
+    Inserts an operator-authored trait into the personality store and reloads
+    the running snapshot, so the trait is live on the next inference read
+    rather than at the next restart.
+
+    Personality traits are recurring patterns, not events — "what happened"
+    belongs in long-term memory (`POST /admin/memories`). The defaults
+    (`confidence` 0.3, `evidence_count` 1) put a hand-written trait on the same
+    footing as one the nightly extraction pass would have added, so it decays
+    the same way if it is never reinforced.
+
+    Like the `/admin/memories` routes this calls the AI facade directly rather
+    than posting a trigger — it is out-of-band operator maintenance, not part
+    of the inbound-trigger conversation.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [section, category, content]
+          properties:
+            section:
+              type: string
+              enum: [traits, relationship, behaviour]
+              description: Which section of the profile the trait belongs to.
+            category:
+              type: string
+              description: >
+                A category defined by the chosen section — `traits`:
+                speaking_style, interests, dislikes, humor_style,
+                conversation_patterns; `relationship`: user_preferences,
+                inside_jokes; `behaviour`: response_tendencies, avoidances,
+                proactive_behaviours, tool_initiative.
+            content:
+              type: string
+              description: The trait, stated as a recurring pattern.
+            confidence:
+              type: number
+              format: float
+              minimum: 0.0
+              maximum: 1.0
+              default: 0.3
+            evidence_count:
+              type: integer
+              minimum: 0
+              default: 1
+              description: >
+                How many observations back the trait. Raise it for a trait you
+                know is well established; it is what reinforcement increments.
+  responses:
+    '201':
+      description: The created trait
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [trait]
+            properties:
+              trait:
+                type: object
+                required:
+                  [id, section, category, content, confidence, evidence_count,
+                   first_observed, last_reinforced]
+                properties:
+                  id:
+                    type: integer
+                  section:
+                    type: string
+                  category:
+                    type: string
+                  content:
+                    type: string
+                  confidence:
+                    type: number
+                    format: float
+                  evidence_count:
+                    type: integer
+                  first_observed:
+                    type: string
+                    format: date-time
+                  last_reinforced:
+                    type: string
+                    format: date-time
+    '400':
+      description: >
+        A required field is missing, the section/category pair is unknown,
+        `confidence` is not a number or falls outside 0.0-1.0, or
+        `evidence_count` is not a non-negative integer.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'

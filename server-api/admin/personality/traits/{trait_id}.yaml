@@ -1,0 +1,44 @@
+delete:
+  summary: Hard-delete a personality trait
+  description: |
+    Removes one trait row from the personality store and reloads the running
+    snapshot. Nothing references a trait, so nothing is cascaded or revived —
+    unlike a memory delete, this simply removes it.
+
+    Deleting a trait the nightly pass keeps re-extracting will bring it back;
+    the extraction prompt is the durable fix for a trait that should never have
+    been recorded.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: trait_id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Id of the trait to delete, as reported by `GET /debug/personality/traits`.
+  responses:
+    '200':
+      description: The trait was deleted
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [deleted]
+            properties:
+              deleted:
+                type: integer
+                description: Id of the deleted trait.
+    '404':
+      description: No trait with that id exists
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'

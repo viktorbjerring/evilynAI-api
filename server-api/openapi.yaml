@@ -149,6 +149,45 @@ components:
         status:
           $ref: '#/components/schemas/ActionStatus'
 
+    ImageAttachment:
+      type: object
+      description: An image sent alongside a chat message.
+      required: [type, media_type, data]
+      properties:
+        type:
+          type: string
+          enum: [image]
+        media_type:
+          type: string
+          enum: [image/png, image/jpeg, image/gif, image/webp]
+        data:
+          type: string
+          description: >-
+            Base64-encoded image bytes. A `data:` URL is accepted and its
+            prefix stripped. Capped at 8 MB decoded.
+        id:
+          type: string
+          description: >-
+            Optional reference for this attachment, and the handle the
+            assistant uses to ask for it. Assigned (`image-1`, `image-2`, ...)
+            when omitted or when it collides with another.
+    LinkAttachment:
+      type: object
+      description: A URL sent alongside a chat message.
+      required: [type, url]
+      properties:
+        type:
+          type: string
+          enum: [link]
+        url:
+          type: string
+          format: uri
+          description: An http(s) URL. Other schemes are rejected.
+        id:
+          type: string
+          description: >-
+            Optional reference for this attachment. Assigned (`link-1`,
+            `link-2`, ...) when omitted or when it collides with another.
     ConfigSettings:
       type: object
       description: >-
@@ -191,6 +230,17 @@ components:
                 overriding one of the two strings cannot remove it entirely.
                 Must not be empty -- a bare block of notes with no instruction
                 leaves the model to infer its task from the system prompt alone.
+            attachment_nudge:
+              type: string
+              description: >-
+                Template for the synthetic turn announcing an attachment, with
+                `{kind}` (the attachment's noun) and `{reference}` (the id the
+                tool action takes) slots; a template may use either, both, or
+                neither. Unlike the other three strings this one frames a
+                *choice*: worded as an instruction the assistant complies every
+                time and the discretion the design rests on is gone. Reword it
+                freely; keep it an offer. A template that cannot be formatted
+                falls back to the built-in default.
         ltm:
           type: object
           description: Long-term memory tuning (`LTMConfig`).

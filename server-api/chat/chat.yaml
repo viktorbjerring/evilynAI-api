@@ -16,6 +16,23 @@ post:
     (`true`/`1`/`yes`/`on`). The reasoning is delivered only over SSE, never in
     this response.
 
+    **Attachments:** an optional `attachments` array carries images and links
+    alongside the message. Each entry is a tagged object — `{"type": "image",
+    "media_type": ..., "data": <base64>}` or `{"type": "link", "url": ...}` —
+    with an optional `id` that becomes the reference the assistant uses to ask
+    for that attachment. When `id` is omitted (or collides with another) one is
+    assigned: `image-1`, `link-1`, and so on.
+
+    Attachments are **not** preprocessed server-side the way audio is
+    transcribed. They are passed through to the AI system, which starts parsing
+    them immediately but leaves it to the assistant whether to read the result
+    at all. A message carrying attachments always runs two-phase, whatever
+    `thinking` says.
+
+    Either `message` or `attachments` must be present — a picture with no words
+    is still a message. On multipart requests the same array is sent as an
+    `attachments` form field holding its JSON.
+
     The response may include `audio_url` — a TTS response ID. Fetch the audio
     from `GET /api/tts/fetch/{audio_url}`.
   tags: [chat]
@@ -27,7 +44,8 @@ post:
       application/json:
         schema:
           type: object
-          required: [message]
+          description: >
+            At least one of `message` or `attachments` must be present.
           properties:
             message:
               type: string
@@ -37,7 +55,20 @@ post:
               default: false
               description: >
                 When true, run two-phase inference: the assistant reasons
-                (streaming `thinking` SSE events) before replying.
+                (streaming `thinking` SSE events) before replying. Forced true
+                when `attachments` is non-empty.
+            attachments:
+              type: array
+              maxItems: 6
+              description: >
+                Images and links sent with the message. Parsing happens inside
+                the AI system, not here.
+              items:
+                oneOf:
+                  - $ref: '../openapi.yaml#/components/schemas/ImageAttachment'
+                  - $ref: '../openapi.yaml#/components/schemas/LinkAttachment'
+                discriminator:
+                  propertyName: type
       multipart/form-data:
         schema:
           type: object
@@ -54,6 +85,12 @@ post:
               description: >
                 Truthy string enables two-phase (thinking) inference for this
                 voice message; omitted or falsy runs single-pass.
+            attachments:
+              type: string
+              description: >
+                The same attachments array as the JSON body, serialised as a
+                JSON string — one payload shape across both transports.
+              example: '[{"type": "link", "url": "https://example.com/x"}]'
   responses:
     '202':
       description: |
@@ -73,8 +110,16 @@ post:
                 type: string
                 nullable: true
                 description: Whisper transcription (only present for audio input)
+              attachments:
+                type: integer
+                description: How many attachments were accepted from this request.
     '400':
-      description: Missing or empty message
+      description: |
+        Neither a message nor any attachments were supplied, or an attachment
+        was malformed — an unknown `type`, invalid base64, a missing
+        `media_type`, a non-http(s) URL, an image over the size limit, or more
+        than six attachments. The `error` string names the offending entry by
+        index.
       content:
         application/json:
           schema:

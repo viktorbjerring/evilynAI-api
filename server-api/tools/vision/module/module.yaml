@@ -1,0 +1,57 @@
+get:
+  summary: vision module details
+  description: |
+    Module root for the `vision` module, which turns an image attached to a
+    user message into text via a vision-capable model. It has no other admin
+    routes: images arrive through `POST /chat` as attachments, never here.
+
+    `pending` lists the references currently waiting to be read — an image is
+    pre-warmed when the message carrying it is posted and discarded when that
+    run ends, so outside a live turn this is normally empty.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: vision
+              details:
+                type: object
+                properties:
+                  model:
+                    type: string
+                    description: Vision model the module queries.
+                  max_tokens:
+                    type: integer
+                  max_image_bytes:
+                    type: integer
+                    description: >
+                      Ceiling on one image; a larger one is refused locally
+                      rather than sent.
+                  supported_media_types:
+                    type: array
+                    items:
+                      type: string
+                    example: ["image/gif", "image/jpeg", "image/png", "image/webp"]
+                  pending:
+                    type: array
+                    items:
+                      type: string
+                    description: References of images currently pre-warmed.
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

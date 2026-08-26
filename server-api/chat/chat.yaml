@@ -19,9 +19,18 @@ post:
     **Attachments:** an optional `attachments` array carries images and links
     alongside the message. Each entry is a tagged object — `{"type": "image",
     "media_type": ..., "data": <base64>}` or `{"type": "link", "url": ...}` —
-    with an optional `id` that becomes the reference the assistant uses to ask
-    for that attachment. When `id` is omitted (or collides with another) one is
-    assigned: `image-1`, `link-1`, and so on.
+    with an optional `id` that becomes the short *reference* the assistant uses
+    to ask for that attachment. When `id` is omitted (or collides with another
+    on the same message) one is assigned: `image-1`, `link-1`, and so on.
+
+    `id` is not the storage id. Every attachment is also filed under a
+    server-minted `YYYYMMDD-HHMMSS-XX` id — the moment it arrived plus its index
+    within the message — which is what `/attachments` and the `attachments`
+    lists on `GET /chat/history` and the SSE `chat` frame address it by. Clients
+    cannot choose it: only the server can keep that namespace collision-free.
+
+    Attachments are stored durably on arrival, whether or not the assistant
+    chooses to look at them, along with whatever description the parse produces.
 
     Attachments are **not** preprocessed server-side the way audio is
     transcribed. They are passed through to the AI system, which starts parsing

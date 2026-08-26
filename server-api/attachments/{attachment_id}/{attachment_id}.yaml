@@ -1,0 +1,114 @@
+parameters:
+  - name: attachment_id
+    in: path
+    required: true
+    schema:
+      type: string
+    description: Storage id, `YYYYMMDD-HHMMSS-XX`.
+    example: "20260824-143502-01"
+
+get:
+  summary: Get one stored attachment, with its description
+  description: |
+    Returns the full record for one attachment, including the `description`
+    produced when it was parsed — the vision model's account of an image, or
+    the readable text extracted from a link.
+
+    `description` is empty in three cases, distinguished only by context: the
+    parse has not finished yet, no module was configured to handle this kind,
+    or the parse produced nothing. It is stored regardless of whether Evilyn
+    chose to read it, so its presence says nothing about what she saw.
+
+    A description is never editable: it records what a parse produced.
+  tags: [attachments]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The stored attachment
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              [id, type, reference, media_type, url, created_at, has_content,
+               size_bytes, has_description, description]
+            properties:
+              id:
+                type: string
+                example: "20260824-143502-01"
+              type:
+                type: string
+                enum: [image, link]
+              reference:
+                type: string
+                description: >
+                  The short per-message handle Evilyn was offered ("image-1").
+                example: "image-1"
+              media_type:
+                type: string
+                example: "image/png"
+              url:
+                type: string
+                description: The URL, for `link` attachments. Empty for images.
+              created_at:
+                type: string
+                format: date-time
+                nullable: true
+              has_content:
+                type: boolean
+              size_bytes:
+                type: integer
+              has_description:
+                type: boolean
+              description:
+                type: string
+                description: >
+                  The parsed description. Empty until the parse finishes, or if
+                  nothing was configured to produce one. A failed parse is
+                  stored verbatim as an "Error: …" string — that a fetch failed
+                  is a fact about the attachment worth keeping.
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No attachment with that id
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+
+delete:
+  summary: Delete a stored attachment
+  description: |
+    Permanently removes the attachment's metadata, its stored bytes and its
+    description.
+
+    Transcript entries that referenced it are deliberately left alone —
+    rewriting history to hide a deletion would be worse than a pointer whose
+    target is gone. A client following a stale pointer gets a 404.
+  tags: [attachments]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Deleted
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, id]
+            properties:
+              status:
+                type: string
+                enum: [deleted]
+              id:
+                type: string
+                example: "20260824-143502-01"
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No attachment with that id
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

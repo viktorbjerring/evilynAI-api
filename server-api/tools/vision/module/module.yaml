@@ -5,9 +5,12 @@ get:
     user message into text via a vision-capable model. It has no other admin
     routes: images arrive through `POST /chat` as attachments, never here.
 
-    `pending` lists the references currently waiting to be read — an image is
-    pre-warmed when the message carrying it is posted and discarded when that
-    run ends, so outside a live turn this is normally empty.
+    `pending` lists the short references currently waiting to be read
+    ("image-1") — an image is pre-warmed when the message carrying it is posted
+    and stops being offered when that run ends, so outside a live turn this is
+    normally empty. Dropping it here does not cancel the parse: it finishes and
+    its result is filed against the attachment, readable via
+    `GET /attachments/{attachment_id}`.
   tags: [module-admin]
   security:
     - bearerAuth: []

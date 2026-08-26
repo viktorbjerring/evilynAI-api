@@ -1,0 +1,109 @@
+get:
+  summary: List stored attachments
+  description: |
+    Returns the attachments that arrived with chat messages — images and links
+    — newest first. Every attachment a message carried is stored, whether or
+    not Evilyn chose to look at it, so this is the complete archive rather than
+    a record of what she read.
+
+    Descriptions are omitted from the listing: a description can be a whole
+    extracted web page, and a page of them would dwarf everything else in the
+    response. `has_description` says whether there is one to fetch via
+    `GET /attachments/{attachment_id}`.
+
+    Ids have the form `YYYYMMDD-HHMMSS-XX` — the moment the message arrived
+    plus a 1-based index across that message's attachments — so they sort
+    chronologically and cannot collide even when several land in the same
+    second.
+  tags: [attachments]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 50
+        maximum: 200
+      description: Maximum attachments to return. Values above 200 are capped.
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+      description: Number of leading (newest) rows to skip.
+  responses:
+    '200':
+      description: The stored attachment set
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [attachments, total, limit, offset]
+            properties:
+              attachments:
+                type: array
+                items:
+                  type: object
+                  required:
+                    [id, type, reference, media_type, url, created_at,
+                     has_content, size_bytes, has_description]
+                  properties:
+                    id:
+                      type: string
+                      description: Storage id, `YYYYMMDD-HHMMSS-XX`.
+                      example: "20260824-143502-01"
+                    type:
+                      type: string
+                      enum: [image, link]
+                      description: >
+                        What this attachment is. A client uses it to pick a
+                        renderer — a link becomes a preview, an image an
+                        `<img>` pointed at the content route.
+                    reference:
+                      type: string
+                      description: >
+                        The short per-message handle Evilyn was offered
+                        ("image-1"). Meaningful only within the message it
+                        arrived on; use `id` to address the attachment.
+                      example: "image-1"
+                    media_type:
+                      type: string
+                      description: MIME type of the stored bytes. Empty for links.
+                      example: "image/png"
+                    url:
+                      type: string
+                      description: The URL, for `link` attachments. Empty for images.
+                    created_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    has_content:
+                      type: boolean
+                      description: >
+                        Whether `GET /attachments/{attachment_id}/content` will
+                        return bytes. False for links.
+                    size_bytes:
+                      type: integer
+                      description: Size of the stored bytes; 0 when there are none.
+                    has_description:
+                      type: boolean
+                      description: >
+                        Whether a parsed description has been stored. False
+                        while the parse is still running, or if no module was
+                        configured to handle this kind.
+              total:
+                type: integer
+                description: >
+                  Total attachments stored, ignoring paging. Read in the same
+                  critical section as the page itself, so it always agrees with
+                  the rows returned beside it.
+              limit:
+                type: integer
+                description: The limit actually applied, after capping.
+              offset:
+                type: integer
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'

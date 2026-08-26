@@ -168,9 +168,11 @@ components:
         id:
           type: string
           description: >-
-            Optional reference for this attachment, and the handle the
+            Optional short reference for this attachment, and the handle the
             assistant uses to ask for it. Assigned (`image-1`, `image-2`, ...)
-            when omitted or when it collides with another.
+            when omitted or when it collides with another on the same message.
+            Not the storage id — that is minted server-side and is what the
+            `/attachments` routes address the attachment by.
     LinkAttachment:
       type: object
       description: A URL sent alongside a chat message.

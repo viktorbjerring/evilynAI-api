@@ -1,0 +1,69 @@
+parameters:
+  - name: attachment_id
+    in: path
+    required: true
+    schema:
+      type: string
+    description: Storage id, `YYYYMMDD-HHMMSS-XX`.
+    example: "20260824-143502-01"
+
+get:
+  summary: Fetch an attachment's stored bytes
+  description: |
+    Returns the raw payload, served as its own media type — this is what a
+    client points an `<img>` at to re-render a picture in the conversation.
+
+    The response is immutable: an id is minted once and its bytes never change,
+    so it is returned with a long-lived `Cache-Control`.
+
+    Served defensively. Both the bytes and their declared `media_type` came from
+    whoever posted the attachment, so only inert image types
+    (`image/png`, `image/jpeg`, `image/gif`, `image/webp`) are echoed back under
+    their own name — anything else is served as `application/octet-stream`.
+    Every response carries `X-Content-Type-Options: nosniff` and a
+    `default-src 'none'; sandbox` CSP.
+
+    A 404 covers every way there can be nothing to send: an unknown id, a
+    `link` attachment (which has a URL, not a payload), or a stored blob that
+    has since gone missing. Use `GET /attachments/{attachment_id}` to tell them
+    apart — `has_content` says whether this route will return anything.
+  tags: [attachments]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The stored bytes
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          description: "`private, max-age=31536000, immutable`"
+        X-Content-Type-Options:
+          schema:
+            type: string
+          description: "`nosniff`"
+        Content-Security-Policy:
+          schema:
+            type: string
+          description: "`default-src 'none'; sandbox`"
+      content:
+        image/png:
+          schema:
+            type: string
+            format: binary
+        image/jpeg:
+          schema:
+            type: string
+            format: binary
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No stored content for that attachment
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

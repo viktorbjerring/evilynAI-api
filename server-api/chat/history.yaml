@@ -4,6 +4,10 @@ get:
     Returns messages from the current in-memory transcript in chronological
     order. The transcript is a rolling buffer; messages older than the buffer
     window are summarized and not returned here.
+
+    Each message carries an `attachments` list — pointers to whatever arrived
+    with it, tagged by `type` and fetched through `/attachments`. That is what
+    lets a client re-render an old conversation with its pictures still in it.
   tags: [chat]
   security:
     - bearerAuth: []
@@ -29,7 +33,7 @@ get:
                 type: array
                 items:
                   type: object
-                  required: [role, content, feedback_flag]
+                  required: [role, content, feedback_flag, attachments]
                   properties:
                     role:
                       type: string
@@ -80,6 +84,39 @@ get:
                         Reinforcement signal carried on the message. Only
                         assistant messages are ever marked; everything else
                         is `undecided`. Set via `POST /chat/feedback`.
+                    attachments:
+                      type: array
+                      description: |
+                        Pointers to what arrived with this message — never
+                        payloads. Always present, usually empty. Fetch the
+                        bytes from `GET /attachments/{id}/content` and the
+                        description from `GET /attachments/{id}`.
+                      items:
+                        type: object
+                        required: [id, type, reference, media_type, url]
+                        properties:
+                          id:
+                            type: string
+                            description: Storage id, for the `/attachments` routes.
+                            example: "20260824-143502-01"
+                          type:
+                            type: string
+                            enum: [image, link]
+                            description: >
+                              What this attachment is, so a client can render a
+                              link differently from a picture.
+                          reference:
+                            type: string
+                            description: >
+                              The short handle Evilyn was offered for it within
+                              this message.
+                            example: "image-1"
+                          media_type:
+                            type: string
+                            description: MIME type for images; empty for links.
+                          url:
+                            type: string
+                            description: The URL for links; empty for images.
     '401':
       description: Unauthorized
       content:

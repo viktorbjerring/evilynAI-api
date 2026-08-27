@@ -1,0 +1,45 @@
+get:
+  summary: The filmstrip's 3×3 contact sheet
+  description: |
+    A single pre-composed sheet of the same nine frames, for a cheap preview
+    where fetching nine files is inconvenient.
+
+    It is a **convenience artefact and not evidence**: it is re-encoded and
+    downscaled, so a label must never be recorded against it. A "quick look"
+    mode built on this still has to send the reviewer to the individual frames
+    before they decide — which the classify route enforces, since `decided_from`
+    is validated against the frame list and this sheet does not appear in it.
+
+    Optional by contract: many tracks have none.
+  tags: [filmstrips]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: track_ref
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20260819T065336Z-8c27__t004"
+  responses:
+    '200':
+      description: The contact sheet
+      content:
+        image/jpeg:
+          schema:
+            type: string
+            format: binary
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: Unknown filmstrip, or the producer sent no contact sheet for it.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Filmstrip labelling is not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

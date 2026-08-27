@@ -1,0 +1,119 @@
+get:
+  summary: One filmstrip in full
+  description: |
+    Every sampled frame of one bird passage, in passage order, plus any decision
+    already written for it.
+
+    `frames` is **already sampled and ordered by the producer** — up to nine,
+    spread evenly across the passage, first and last always included, and the
+    hero forced in. Do not re-sample or reorder it.
+
+    `hero` is the frame the detector ranked best (sharpest and largest). It is a
+    suggestion for what to show first, **not a constraint**: the reviewer may
+    decide from any frame, and `decided_from` on the verdict records which one
+    they actually used.
+
+    `frames_in_track` (the whole passage) and `frames_shown` (the sample) differ,
+    and the difference is worth putting on screen — "18 frames, 9 shown".
+
+    `detector_class` is a COCO stand-in's guess on a class-agnostic head. **It is
+    not truth and must not be pre-selected in the UI** — treating it as a default
+    would launder its errors into the training set. Show it as context if useful.
+  tags: [filmstrips]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: track_ref
+      in: path
+      required: true
+      schema:
+        type: string
+      description: >
+        The filmstrip's reference — the track id with `#` replaced by `__`,
+        because `#` is a fragment delimiter in URLs and a footgun in shells.
+        The unmodified `track_id` is in the response body.
+      example: "cam0-20260819T065336Z-8c27__t004"
+  responses:
+    '200':
+      description: The filmstrip
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '../../openapi.yaml#/components/schemas/FilmstripSummary'
+              - type: object
+                required: [schema, frames, contact_url, verdict]
+                properties:
+                  schema:
+                    type: integer
+                  frames:
+                    type: array
+                    description: The sampled frames, in passage order.
+                    items:
+                      type: object
+                      required:
+                        [file, record_id, timestamp_utc, track_index,
+                         long_axis_px, width, height, bytes, url]
+                      properties:
+                        file:
+                          type: string
+                          example: "01.jpg"
+                        record_id:
+                          type: string
+                          description: >
+                            **The join key.** A verdict names `record_id`s, never
+                            filenames — filenames are positional and would break
+                            if the producer ever changed how it samples.
+                          example: "7fd4a5a6-b428-4dc2-9305-a9e98d0a01eb"
+                        timestamp_utc:
+                          type: string
+                          format: date-time
+                        track_index:
+                          type: integer
+                          description: Position within the full passage.
+                        long_axis_px:
+                          type: number
+                        width:
+                          type: integer
+                          description: >
+                            Crops vary per frame in size *and* aspect ratio —
+                            they are cut around a moving animal, typically
+                            120–400 px on the long axis. Fit them into a fixed
+                            box; do not assume a common size.
+                        height:
+                          type: integer
+                        bytes:
+                          type: integer
+                        url:
+                          type: string
+                          description: Where to fetch this frame's pixels.
+                          example: "/filmstrips/cam0-20260819T065336Z-8c27__t004/frames/01.jpg"
+                  contact_url:
+                    type: string
+                    description: >
+                      Where to fetch the 3×3 contact sheet, or empty when the
+                      producer sent none.
+                  verdict:
+                    nullable: true
+                    allOf:
+                      - $ref: '../../openapi.yaml#/components/schemas/FilmstripVerdict'
+                    description: >
+                      The decision waiting to be collected, or null. Null also
+                      means "already collected" — the producer removes a verdict
+                      once merged into its own append-only log.
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: >
+        No such filmstrip. Covers an unknown reference, a malformed one, and a
+        track directory that is still syncing.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Filmstrip labelling is not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

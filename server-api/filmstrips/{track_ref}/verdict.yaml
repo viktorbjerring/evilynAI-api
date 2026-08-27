@@ -1,0 +1,52 @@
+delete:
+  summary: Withdraw a decision that hasn't been collected yet
+  description: |
+    Remove a verdict this server wrote before the detector has picked it up.
+    The mis-tap escape hatch — useful when labelling from a phone.
+
+    This only ever deletes a file this side of the exchange wrote, so it cannot
+    disturb the detector's half of the tree.
+
+    404 once the detector has merged and removed it. At that point the label is
+    in an append-only log and the way to change it is to decide again — classify
+    the filmstrip afresh — not to un-say it.
+  tags: [filmstrips]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: track_ref
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20260819T065336Z-8c27__t004"
+  responses:
+    '200':
+      description: The verdict was removed
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, reference]
+            properties:
+              status:
+                type: string
+                enum: [withdrawn]
+              reference:
+                type: string
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: >
+        No verdict is waiting for this filmstrip — never decided, or already
+        collected. The two are indistinguishable by design.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Filmstrip labelling is not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

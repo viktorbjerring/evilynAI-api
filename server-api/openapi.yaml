@@ -416,6 +416,156 @@ components:
           nullable: true
           description: Reason the backend was unreachable, if any.
 
+    FilmstripSummary:
+      type: object
+      description: >-
+        One bird track as it appears in a listing — enough to render a card and
+        pick the next thing to decide.
+      required:
+        [reference, track_id, date, event_id, camera_id, frames_in_track,
+         frames_shown, span_seconds, first_utc, last_utc, detector_class,
+         best_long_axis_px, hero, hero_url, has_contact, decided]
+      properties:
+        reference:
+          type: string
+          description: >-
+            How this filmstrip is addressed — the track id with `#` replaced by
+            `__`, since `#` is a URL fragment delimiter and a shell footgun.
+          example: "cam0-20260819T065336Z-8c27__t004"
+        track_id:
+          type: string
+          description: >-
+            The unmodified track id, as the detector wrote it. Always take it
+            from here rather than parsing it back out of `reference`.
+          example: "cam0-20260819T065336Z-8c27#t004"
+        date:
+          type: string
+          description: >-
+            The UTC date of the track's first frame. It exists to keep directory
+            sizes sane on the detector and carries no other meaning.
+          example: "2026-08-19"
+        event_id:
+          type: string
+          description: The detection event this passage belongs to.
+        camera_id:
+          type: string
+          example: "cam0"
+        frames_in_track:
+          type: integer
+          description: Frames in the whole passage.
+          example: 18
+        frames_shown:
+          type: integer
+          description: >-
+            Frames in the sample the detector sent (up to nine). It differs from
+            `frames_in_track`, and the difference is worth showing.
+          example: 9
+        span_seconds:
+          type: number
+          description: How long the passage lasted.
+        first_utc:
+          type: string
+          format: date-time
+        last_utc:
+          type: string
+          format: date-time
+        detector_class:
+          type: string
+          description: >-
+            A COCO stand-in's guess on a class-agnostic head. **Not truth, and
+            must not be pre-selected in a UI** — treating it as a default would
+            launder its errors into the training set. Context only.
+          example: "bird"
+        best_long_axis_px:
+          type: number
+        hero:
+          type: string
+          description: >-
+            The frame the detector ranked best. A suggestion for what to show
+            first, not a constraint — the reviewer may decide from any frame.
+          example: "05.jpg"
+        hero_url:
+          type: string
+          description: Where to fetch the hero frame's pixels.
+        has_contact:
+          type: boolean
+          description: >-
+            Whether a pre-composed 3×3 contact sheet exists. It is a preview
+            only — never evidence, and a label may not be recorded against it.
+        decided:
+          type: boolean
+          description: >-
+            Whether a verdict is waiting to be collected. False also covers
+            "already collected": the detector removes a verdict once merged.
+
+    FilmstripVerdict:
+      type: object
+      description: >-
+        One decision about one bird track, in the shape the detector consumes.
+      required:
+        [schema, track_id, verdict_id, decided_utc, decided_by, client,
+         decided_from, scope, group, species, action, attributes, note, frames,
+         split_after]
+      properties:
+        schema:
+          type: integer
+        track_id:
+          type: string
+          example: "cam0-20260819T065336Z-8c27#t004"
+        verdict_id:
+          type: string
+          description: >-
+            Stable unique string, used for idempotent merges — a repeat of the
+            same id is a no-op on the detector's side.
+        decided_utc:
+          type: string
+          format: date-time
+        decided_by:
+          type: string
+        client:
+          type: string
+          description: What recorded the decision.
+          example: "evilyn-server/1.4.0"
+        decided_from:
+          type: string
+          description: >-
+            The frame the call was made from. It determines label provenance:
+            that record is marked as seen by a human, every other record in the
+            passage as propagated.
+          example: "05.jpg"
+        scope:
+          type: string
+          enum: [track, frame]
+        group:
+          type: string
+          nullable: true
+        species:
+          type: string
+          nullable: true
+        action:
+          type: string
+          nullable: true
+        attributes:
+          type: object
+          additionalProperties: true
+        note:
+          type: string
+          nullable: true
+        frames:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: >-
+            `record_id`s, when `scope` is `frame`. Null otherwise — the detector
+            ignores them there.
+        split_after:
+          type: string
+          nullable: true
+          description: >-
+            A `record_id`: the track is visibly two animals and should be cut
+            after that record.
+
   responses:
     Unauthorized:
       description: Missing or invalid JWT token

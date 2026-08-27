@@ -1,0 +1,183 @@
+post:
+  summary: Record the decision for one filmstrip
+  description: |
+    Classify a bird track. The decision is written where the detector collects
+    it and merged there into an append-only label log.
+
+    **`decided_from` is required and is not a formality.** The detector splits
+    each label's provenance on it: the record it names is marked as having been
+    seen by a human (`label_source: crop`), and every other record in the
+    passage is marked as propagated (`label_source: track`). Propagated labels
+    are used carefully for the classifier and must be excluded from evaluation
+    outright — scoring a classifier against labels that were never visible in
+    the image measures the tracker, not the classifier. A verdict that cannot be
+    split this way is refused.
+
+    **`group` is required unless an `action` is given.** The coarse pass is the
+    required one for an ordinary label, and a group with `species: null` is a
+    real, useful answer — "plainly a corvid, but which one" happens constantly.
+    An `action`, though, is a statement that there is nothing to group:
+    demanding a group alongside `false_positive` would be asking the reviewer to
+    name the species of a bird they have just said isn't there.
+
+    **A repeat is normal.** Last write wins here, and the detector merges into an
+    append-only log, so a corrected decision needs no protocol of its own. Pass
+    the same `verdict_id` to make a retry a no-op on the detector's side.
+
+    Unknown attribute keys and values outside the published vocabulary are
+    **dropped, not rejected**, and free-text attributes are truncated rather than
+    refused — a client built against last week's vocabulary must still be able to
+    record a label.
+  tags: [filmstrips]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: track_ref
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20260819T065336Z-8c27__t004"
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [decided_from]
+          properties:
+            decided_from:
+              type: string
+              description: >
+                The frame the call was actually made from — one of the `file`
+                values in the filmstrip's `frames`. Required; see above.
+              example: "05.jpg"
+            group:
+              type: string
+              nullable: true
+              description: >
+                The coarse pass — a `name` from the vocabulary's `groups`.
+                Required unless `action` is given.
+              example: "corvid"
+            species:
+              type: string
+              nullable: true
+              description: >
+                A member of the chosen group, or null when the group is as far
+                as the reviewer could get. A `withdrawn` member is accepted here
+                but must never be offered as a choice.
+              example: "corvus_monedula"
+            scope:
+              type: string
+              enum: [track, frame]
+              default: track
+              description: >
+                `track` applies the species to every record in the passage;
+                `frame` applies it only to the records named in `frames`.
+            frames:
+              type: array
+              nullable: true
+              items:
+                type: string
+              description: >
+                Required when `scope` is `frame`: `record_id`s from this
+                filmstrip's frames. Ignored (and stored as null) otherwise.
+            action:
+              type: string
+              nullable: true
+              description: >
+                A non-label outcome from the vocabulary's `actions` —
+                `unresolvable` (nothing identifiable), `false_positive` (no
+                animal at all), `rejected` (drop the track) — or null for an
+                ordinary label.
+            attributes:
+              type: object
+              nullable: true
+              additionalProperties: true
+              description: >
+                Optional. Keys and values are matched against the published
+                vocabulary; anything unrecognised is dropped silently and
+                free text is truncated to 200 characters.
+              example: {age: adult}
+            note:
+              type: string
+              nullable: true
+              description: Free-text note carried through to the detector.
+            split_after:
+              type: string
+              nullable: true
+              description: >
+                A `record_id`. Says the track is visibly two animals and should
+                be cut after that record; the detector re-tracks and re-queues
+                both halves, and ignores any species in the same verdict.
+            verdict_id:
+              type: string
+              nullable: true
+              description: >
+                Any stable unique string. Supply one to make a retry idempotent;
+                omitted, the server mints one.
+            decided_by:
+              type: string
+              nullable: true
+              description: Who decided. Falls back to the server's configured operator.
+            client:
+              type: string
+              nullable: true
+              description: >
+                What recorded it. Falls back to the server's own
+                `evilyn-server/<version>`.
+  responses:
+    '200':
+      description: The decision as written
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, verdict]
+            properties:
+              status:
+                type: string
+                enum: [recorded]
+              verdict:
+                $ref: '../../openapi.yaml#/components/schemas/FilmstripVerdict'
+    '400':
+      description: >
+        The verdict was refused. Every problem is reported at once — a
+        round-trip per mistake is a poor way to discover that the species and
+        the frame list were both wrong.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [errors]
+            properties:
+              errors:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "'decided_from' is required: it names the frame the call was made from"
+                  - "'species' must be a member of group 'corvid' (corvus_cornix, corvus_monedula); got 'cat'"
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No such filmstrip, or it is still syncing.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '409':
+      description: >
+        The producer has published no vocabulary, so there is nothing to
+        validate a species against. A label written on a guess is
+        indistinguishable from a checked one once merged, so nothing is written.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Filmstrip labelling is not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

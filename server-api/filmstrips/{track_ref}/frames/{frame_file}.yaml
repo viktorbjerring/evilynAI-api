@@ -1,0 +1,75 @@
+get:
+  summary: One frame's pixels
+  description: |
+    A single crop, **byte-identical to the detector's archive**. Not re-encoded,
+    resized, rotated or stripped of metadata.
+
+    That is provenance, not laziness. A label means "a human looked at *these*
+    pixels and said rook"; pixels that went through a second encoder are
+    attesting to something the archive does not contain. Bandwidth is not the
+    constraint — a whole nine-frame track is roughly 340 KB.
+
+    For whoever renders them:
+
+    * **Dimensions vary per frame**, in size and aspect ratio. Fit them into a
+      fixed box; do not assume a common size.
+    * **They are small** — typically 120–400 px on the long axis. At native size
+      on a high-DPI screen they are postage stamps. Upscaling for display is
+      fine and expected; that is a display choice, not a re-encode.
+    * Frames are already in passage order and already sampled. Do not re-sample
+      or reorder them.
+
+    Only filenames the track's own `track.json` declares are servable — the set
+    is closed, so an undeclared file sitting in the same directory is a 404.
+
+    Requires auth like every other route here: the tree is private data. The
+    producer filters people out on the *detector's* word, not on the pixels, so
+    a person in the background of a bird crop is possible.
+  tags: [filmstrips]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: track_ref
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20260819T065336Z-8c27__t004"
+    - name: frame_file
+      in: path
+      required: true
+      schema:
+        type: string
+      description: A `file` value from the filmstrip's `frames` array.
+      example: "01.jpg"
+  responses:
+    '200':
+      description: >
+        The frame, immutable-cacheable — a track directory is written once and
+        never rewritten in place.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          example: "private, max-age=31536000, immutable"
+      content:
+        image/jpeg:
+          schema:
+            type: string
+            format: binary
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: >
+        Unknown track, a filename the track does not declare, or a file missing
+        from an otherwise-listed directory.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Filmstrip labelling is not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'

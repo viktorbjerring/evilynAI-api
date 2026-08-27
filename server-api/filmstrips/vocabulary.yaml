@@ -1,0 +1,111 @@
+get:
+  summary: The label space published by the detector
+  description: |
+    The classes a filmstrip may be labelled with, as published by the producer
+    so that no client ever hardcodes them. When a species is added on the
+    detector it appears here on the next sync; a client working from a
+    hardcoded list would quietly stop being able to record it.
+
+    **Fetch this before offering any choice, and drive the picker from it.**
+
+    Labelling is a deliberate two-pass flow: pick the coarse `group` first,
+    then the `species` within that group. Holding fifteen classes in mind for
+    every track is what makes labelling tiring, and a tired reviewer is an
+    inconsistent one — a UI that puts all fifteen on screen at once produces
+    measurably worse data than one that follows the two steps. Each group
+    carries a `key`, the single keystroke the producer suggests for it, so the
+    flow can be driven from a keyboard without aiming at anything.
+
+    A member flagged `withdrawn` is **accepted if sent but must not be offered
+    as a choice** — a `human` label is legal to record and is never wanted as a
+    target class. It stays listed rather than being filtered out so that an
+    incoming `human` verdict is distinguishable from a typo.
+  tags: [filmstrips]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The published label space
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schema, groups, actions, attributes, withdrawn_species]
+            properties:
+              schema:
+                type: integer
+                description: Contract schema version.
+              groups:
+                type: array
+                description: The coarse pass. Each owns the species inside it.
+                items:
+                  type: object
+                  required: [name, key, label, members]
+                  properties:
+                    name:
+                      type: string
+                      example: "corvid"
+                    key:
+                      type: string
+                      description: Suggested single-keystroke shortcut.
+                      example: "1"
+                    label:
+                      type: string
+                      description: Human-readable description of the group.
+                      example: "crow, rook, jackdaw or magpie"
+                    members:
+                      type: array
+                      description: The species pass, within this group.
+                      items:
+                        type: object
+                        required: [name, withdrawn]
+                        properties:
+                          name:
+                            type: string
+                            example: "corvus_monedula"
+                          withdrawn:
+                            type: boolean
+                            description: >
+                              True when the species is accepted if sent but must
+                              not be offered as a choice.
+              actions:
+                type: array
+                description: >
+                  Non-label outcomes a verdict may carry instead of a group —
+                  `unresolvable` (nothing identifiable), `false_positive` (no
+                  animal at all), `rejected` (drop the track).
+                items:
+                  type: string
+              attributes:
+                type: object
+                description: >
+                  Optional per-verdict attributes. A key whose value is an array
+                  is a fixed vocabulary; a key whose value is a string describes
+                  a free-text field ("free text, 200 chars").
+                additionalProperties: true
+                example:
+                  age: [adult, juvenile, unknown]
+                  plumage: "free text, 200 chars"
+              withdrawn_species:
+                type: array
+                description: >
+                  The withdrawn set, flat. The same information is on each
+                  member's `withdrawn` flag, which is what a picker should read.
+                items:
+                  type: string
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: >
+        The producer has published no vocabulary yet. A real state early in a
+        deployment, and the reason classification refuses rather than guessing.
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Filmstrip labelling is not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'

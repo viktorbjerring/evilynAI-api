@@ -1,0 +1,112 @@
+get:
+  summary: List bird-track filmstrips awaiting a decision
+  description: |
+    The labelling backlog. The yard's bird detector cuts one **track** per bird
+    passage — one bird's journey through one event — and syncs it to this
+    server; each entry here is one such track and therefore **one decision**.
+    A track is the unit deliberately: 20,239 pending crops are only 1,133
+    tracks, so deciding per crop would be 18× the work for the same labels.
+
+    Oldest first by default, because this is a backlog and the track that has
+    been waiting longest is the one to decide next.
+
+    Only *complete* track directories appear. A directory is complete when its
+    `track.json` is present and every file it lists is there with the declared
+    size and SHA-256; a track still arriving over the sync simply doesn't list
+    yet and will on a later request. It is not reported as broken, because it
+    isn't — that rule exists precisely so no ordering guarantee is needed from
+    whatever moves the files.
+
+    `available` distinguishes "nothing to label" from "no sync tree on this
+    server at all" — two states that otherwise both render as an empty list.
+  tags: [filmstrips]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 50
+        maximum: 200
+      description: Maximum filmstrips to return. Values above 200 are capped.
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+      description: Number of leading rows to skip, in the requested order.
+    - name: state
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [pending, decided, all]
+        default: pending
+      description: >
+        `pending` (the default) is the working set — tracks with no decision
+        waiting to be collected. `decided` shows the ones already answered but
+        not yet carried away by the next sync; `all` shows both.
+    - name: order
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [oldest, newest]
+        default: oldest
+      description: Passage order. `oldest` works the backlog front to back.
+    - name: camera
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Restrict to one camera id (`cam0`). Empty matches every camera.
+  responses:
+    '200':
+      description: The matching filmstrips
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [filmstrips, total, limit, offset, state, order, available]
+            properties:
+              filmstrips:
+                type: array
+                items:
+                  $ref: '../openapi.yaml#/components/schemas/FilmstripSummary'
+              total:
+                type: integer
+                description: Filmstrips matching the filters, ignoring paging.
+              limit:
+                type: integer
+                description: The limit actually applied, after capping.
+              offset:
+                type: integer
+              state:
+                type: string
+                enum: [pending, decided, all]
+              order:
+                type: string
+                enum: [oldest, newest]
+              available:
+                type: boolean
+                description: >
+                  Whether a sync tree exists on this server at all. False means
+                  nothing has ever been synced here — not that the backlog is
+                  empty.
+    '400':
+      description: An unrecognised `state`
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: Filmstrip labelling is not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'

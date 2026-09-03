@@ -21,7 +21,7 @@ get:
                 type: array
                 items:
                   type: object
-                  required: [id, intent, status, trigger_time]
+                  required: [id, intent, status, trigger_time, notify]
                   properties:
                     id:
                       type: string
@@ -40,6 +40,13 @@ get:
                       type: string
                       nullable: true
                       description: Human-readable cadence; null for one-off schedules.
+                    notify:
+                      type: boolean
+                      description: >-
+                        Whether the assistant response produced when this
+                        schedule fires is pushed to the user as a notification.
+                        Schedules created before this field existed report
+                        `true`.
     '401':
       description: Unauthorized
       content:
@@ -58,6 +65,13 @@ post:
     (at least one must be positive). For `recurring`, `time_of_day` is
     required; the cadence is daily unless `day_of_week`, `day_of_month`, or
     `day_interval` is supplied.
+
+    `notify` (default `true`) decides delivery when the schedule fires: with it
+    set, the assistant response produced by the fire is pushed to the user as a
+    notification, and the system message that starts that turn says so. The
+    assistant may still decline the push during the turn — by sending a
+    notification itself, or by calling the notificator tool's disable action —
+    so `notify` is a request, not a guarantee.
   tags: [module-admin]
   security:
     - bearerAuth: []
@@ -83,6 +97,12 @@ post:
               type: string
               enum: [single, recurring]
               default: single
+            notify:
+              type: boolean
+              default: true
+              description: >-
+                Whether the assistant response produced when this schedule
+                fires is pushed to the user as a notification.
             delay_minutes:
               type: integer
               description: "single only: minutes from now to fire."
@@ -109,7 +129,7 @@ post:
         application/json:
           schema:
             type: object
-            required: [id, kind, trigger_time]
+            required: [id, kind, trigger_time, notify]
             properties:
               id:
                 type: string
@@ -123,6 +143,9 @@ post:
               recurrence_description:
                 type: string
                 description: Human-readable cadence (recurring only).
+              notify:
+                type: boolean
+                description: The delivery choice stored for this schedule.
     '400':
       description: Missing label/intent, bad delay, or unknown kind
       content:

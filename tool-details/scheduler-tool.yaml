@@ -13,4 +13,12 @@ scheduler-tool:
           items:
             type: string
 
-  details: {}
+  details:
+    - type: object
+      properties:
+        timezone:
+          type: string
+        active_schedules:
+          type: integer
+        notify_notice:
+          type: string

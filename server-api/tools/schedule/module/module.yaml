@@ -2,7 +2,9 @@ get:
   summary: schedule module details
   description: |
     Module root for the `schedule` module. Returns the configured user
-    timezone (IANA name) and the number of currently active schedules.
+    timezone (IANA name), the number of currently active schedules, and the
+    notice appended to the system message when a schedule created with
+    `notify` fires.
   tags: [module-admin]
   security:
     - bearerAuth: []
@@ -20,13 +22,20 @@ get:
                 example: schedule
               details:
                 type: object
-                required: [timezone, active_schedules]
+                required: [timezone, active_schedules, notify_notice]
                 properties:
                   timezone:
                     type: string
                     example: Europe/Copenhagen
                   active_schedules:
                     type: integer
+                  notify_notice:
+                    type: string
+                    description: >-
+                      Text appended to the fired system message when the
+                      schedule requested a notification. Configured per
+                      deployment via the `schedule` tool's `notify_notice`
+                      config key; an empty string appends nothing.
     '401':
       description: Unauthorized
       content:

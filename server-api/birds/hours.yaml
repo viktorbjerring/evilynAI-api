@@ -1,0 +1,75 @@
+get:
+  summary: Raw hourly sighting rows
+  description: |
+    The individual hour rows over a range, oldest first — for "when in the day
+    are they about" questions, and for inspecting what a producer actually
+    sent.
+
+    A row with `total_tracks` of 0 is an hour the detector watched and saw
+    nothing. An hour absent from the list was never reported: use
+    `GET /birds/sightings` if you need that distinction counted for you.
+  tags: [birds]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: start
+      in: query
+      required: false
+      description: Start of the range (inclusive), ISO-8601, UTC.
+      schema: {type: string}
+    - name: end
+      in: query
+      required: false
+      description: End of the range (exclusive), ISO-8601, UTC. Defaults to now.
+      schema: {type: string}
+    - name: days
+      in: query
+      required: false
+      description: Days back from `end` when `start` is not given.
+      schema: {type: integer, minimum: 1, default: 7}
+    - name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 2000, default: 200}
+    - name: offset
+      in: query
+      required: false
+      schema: {type: integer, minimum: 0, default: 0}
+  responses:
+    '200':
+      description: One page of hour rows.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              source: {type: string, enum: [detector]}
+              total:
+                type: integer
+                description: Rows matching the range, before paging.
+              limit: {type: integer}
+              offset: {type: integer}
+              range_start_utc: {type: string}
+              range_end_utc: {type: string}
+              hours:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    hour_start_utc: {type: string, example: '2026-09-03T06:00:00Z'}
+                    total_tracks: {type: integer}
+                    classified: {type: integer}
+                    unclassified: {type: integer}
+                    tracks:
+                      type: object
+                      additionalProperties: {type: integer}
+    '400':
+      description: An unparseable date, a backwards range, or one that is too wide.
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: Sighting statistics are not configured on this server.

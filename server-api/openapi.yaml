@@ -4,8 +4,12 @@ info:
   title: EvilynAI API
   version: "1.0.0"
   description: |
-    REST API for the EvilynAI backend. All endpoints except `/health` and
-    `/auth/login` require a Bearer JWT token obtained from `POST /api/auth/login`.
+    REST API for the EvilynAI backend. Endpoints require a Bearer JWT token
+    obtained from `POST /api/auth/login`, with three exceptions: `/health`,
+    `/auth/login`, and `POST /birds/reports` — the yard detector's statistics
+    upload, which presents a shared secret in `X-Corvus-Key` (the `corvusKey`
+    scheme) instead. That route is machine-to-machine: the detector is not a
+    person and does not hold the human credential the rest of the API uses.
 
     The SSE stream endpoint (`GET /api/stream`) also accepts the token as a
     `?token=` query parameter, because `EventSource` cannot set custom headers.
@@ -20,6 +24,16 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+    # Machine-to-machine credential for the yard detector's statistics upload,
+    # and nothing else. The detector is not a person and must not be made to
+    # hold the human bearer token that reaches every other route; this key
+    # opens exactly one endpoint. Unset on the server means that endpoint
+    # answers 503 rather than accepting anything.
+    corvusKey:
+      type: apiKey
+      in: header
+      name: X-Corvus-Key
 
   schemas:
     Error:

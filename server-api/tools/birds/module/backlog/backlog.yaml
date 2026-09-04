@@ -1,0 +1,55 @@
+get:
+  summary: Filmstrip labelling backlog
+  description: |
+    How many bird filmstrips are waiting for a human, plus the state of the
+    daily nudge.
+
+    `available` distinguishes an empty backlog from an unreachable sync tree.
+    The two are not the same answer: telling somebody there is nothing left to
+    label when the detector never synced is the one badly wrong response this
+    can give.
+
+    `undelivered_verdicts` covers only decisions still sitting in the tree. The
+    detector removes each one once it has merged it, so this is outstanding
+    work — never a history of what has been labelled.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Backlog counts and nudge state.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [connected, backlog, nudge]
+            properties:
+              connected:
+                type: boolean
+                description: Whether the backlog source is bound.
+              backlog:
+                type: object
+                nullable: true
+                description: Null when not connected.
+                properties:
+                  available:
+                    type: boolean
+                    description: False when the sync tree is not reachable.
+                  pending: {type: integer}
+                  decided: {type: integer}
+                  total: {type: integer}
+                  oldest_pending_utc: {type: string, nullable: true}
+                  oldest_pending_local: {type: string, nullable: true}
+                  timezone: {type: string, example: Europe/Copenhagen}
+                  undelivered_verdicts:
+                    type: object
+                    properties:
+                      total: {type: integer}
+                      groups: {type: object, additionalProperties: {type: integer}}
+                      species: {type: object, additionalProperties: {type: integer}}
+                      actions: {type: object, additionalProperties: {type: integer}}
+              nudge:
+                type: object
+                description: Same shape as `details.nudge` on the module root.
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'

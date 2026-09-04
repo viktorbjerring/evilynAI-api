@@ -1,0 +1,155 @@
+post:
+  summary: Upload hourly bird sighting counts
+  description: |
+    The yard detector's own counts, bucketed by hour. One upload carries every
+    hour since the producer last managed to reach the server.
+
+    **This route does not use the bearer token the rest of the API uses.** The
+    detector is a machine, and handing it the single human credential that
+    reaches every other route would be a poor trade for the one endpoint it
+    needs. It presents a shared secret in `X-Corvus-Key` instead, which opens
+    nothing else. When `BIRD_INGEST_KEY` is unset the route answers **503** —
+    an unconfigured key refuses rather than opens.
+
+    **Overlapping hours are expected and replace.** `(camera_id,
+    hour_start_utc)` is the key, so a producer catching up after an outage can
+    resend whatever it is unsure about without double-counting. The new
+    delivery is authoritative for the whole hour: a species that disappears
+    from it is deleted rather than merged.
+
+    **Hours in which nothing was seen should be sent**, with empty `tracks`. A
+    stored zero means "watched, nothing came"; a missing hour means nothing is
+    known about it. Readers cannot tell those apart unless the empty hours
+    arrive.
+
+    `hour_start_utc` must be exactly on the hour and carry a UTC offset. A
+    misaligned bucket is refused rather than stored: it would key a parallel
+    set of rows that never collide with the aligned ones, quietly voiding the
+    overwrite guarantee.
+
+    `total_tracks` may exceed the sum of `tracks` — the remainder is tracks the
+    detector cut but could not put a species on, which is kept as
+    `unclassified_tracks` rather than reconciled away. A total *below* the
+    species sum is refused, since the hour would then claim fewer tracks than
+    it itemises.
+
+    A species absent from the published `vocabulary.json` is **stored and
+    flagged** in `unknown_species`, never rejected: the vocabulary syncs on its
+    own schedule, so refusing would discard real counts until a file arrived.
+  tags: [birds]
+  security:
+    - corvusKey: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [camera_id, hours]
+          properties:
+            schema:
+              type: integer
+              default: 1
+              description: Wire schema version. Must be 1.
+            producer:
+              type: string
+              description: Free-form producer identifier, recorded per upload.
+              example: corvus/0.9
+            camera_id:
+              type: string
+              description: The camera these hours belong to. One camera per upload.
+              example: cam0
+            hours:
+              type: array
+              maxItems: 2000
+              description: |
+                The hours being reported. At most 2000 per upload — a producer
+                returning from a long outage should page rather than send a
+                year at once.
+              items:
+                type: object
+                required: [hour_start_utc]
+                properties:
+                  hour_start_utc:
+                    type: string
+                    description: Start of the hour, exactly on the hour, UTC.
+                    example: '2026-09-03T06:00:00Z'
+                  tracks:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                      minimum: 0
+                    description: |
+                      Track counts per species, using the `vocabulary.json`
+                      nomenclature. Empty for an hour in which nothing was
+                      seen — send those.
+                    example:
+                      corvus_monedula: 12
+                      pica_pica: 3
+                  total_tracks:
+                    type: integer
+                    minimum: 0
+                    description: |
+                      All tracks in the hour, including any with no species.
+                      Defaults to the sum of `tracks` when omitted.
+                    example: 15
+        example:
+          schema: 1
+          producer: corvus/0.9
+          camera_id: cam0
+          hours:
+            - hour_start_utc: '2026-09-03T06:00:00Z'
+              tracks: {corvus_monedula: 12, pica_pica: 3}
+              total_tracks: 15
+            - hour_start_utc: '2026-09-03T07:00:00Z'
+              tracks: {}
+              total_tracks: 0
+  responses:
+    '200':
+      description: Stored.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, hours_written, hours_replaced]
+            properties:
+              status: {type: string, example: recorded}
+              hours_written:
+                type: integer
+                description: Hours accepted from this upload.
+              hours_replaced:
+                type: integer
+                description: How many of those already existed and were overwritten.
+              first_hour: {type: string, nullable: true}
+              last_hour: {type: string, nullable: true}
+              unknown_species:
+                type: array
+                items: {type: string}
+                description: |
+                  Species not in the published vocabulary. Stored anyway;
+                  empty when no vocabulary is published, since with nothing to
+                  check against "unknown" would be a claim rather than an
+                  observation.
+    '400':
+      description: |
+        Validation failed. Every problem is reported at once, each naming its
+        bucket by index — a detector that uploads hourly should not learn about
+        one bad field per attempt.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items: {type: string}
+            example:
+              errors:
+                - "'camera_id' is required"
+                - "hours[0]: 'hour_start_utc' must be exactly on the hour (got '2026-09-03T06:30:00Z')"
+    '401':
+      description: Missing or incorrect ingest key.
+    '500':
+      description: The upload could not be stored.
+    '503':
+      description: Ingest is not configured on this server (`BIRD_INGEST_KEY` unset).

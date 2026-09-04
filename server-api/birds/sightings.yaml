@@ -1,0 +1,102 @@
+get:
+  summary: Bird sighting totals over a range
+  description: |
+    What the detector counted, by species, over a time range.
+
+    **These are the detector's own guesses, not labels a human confirmed.** The
+    `source` field says so explicitly. Human-confirmed labels live in the
+    filmstrip tree and are a different claim entirely; the two are never mixed,
+    because presenting a guess as a confirmed label would launder it into
+    evidence.
+
+    **Read `hours_missing` before drawing a conclusion.** The detector reports
+    hours in which nothing was seen, so a zero total across reported hours
+    genuinely means nothing came — but hours nobody reported mean nobody was
+    watching. Without the coverage fields those two are the same empty result.
+
+    `hours_expected` is derived from the actual range rather than from a day
+    count, so a range spanning a daylight-saving transition reports 23 or 25
+    hours for that day rather than 24.
+
+    Query dates are read as **UTC**, matching the stored rows. Local-day
+    semantics belong to the assistant-facing tool, where "yesterday" means a
+    person's yesterday.
+  tags: [birds]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: start
+      in: query
+      required: false
+      description: Start of the range (inclusive), ISO-8601 date or datetime, UTC.
+      schema: {type: string}
+      example: '2026-09-01'
+    - name: end
+      in: query
+      required: false
+      description: End of the range (exclusive), ISO-8601. Defaults to now.
+      schema: {type: string}
+      example: '2026-09-08'
+    - name: days
+      in: query
+      required: false
+      description: Days back from `end` when `start` is not given.
+      schema: {type: integer, minimum: 1, default: 7}
+    - name: species
+      in: query
+      required: false
+      description: Restrict the species breakdown to a single species.
+      schema: {type: string}
+      example: corvus_monedula
+  responses:
+    '200':
+      description: Totals and coverage.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              source:
+                type: string
+                enum: [detector]
+                description: Whose claim these counts are. Always the detector.
+              range_start_utc: {type: string}
+              range_end_utc: {type: string}
+              hours_expected:
+                type: integer
+                description: Whole hours in the range, from the range itself.
+              hours_reported:
+                type: integer
+                description: How many of those the detector actually uploaded.
+              hours_missing:
+                type: integer
+                description: |
+                  Hours nothing is known about. Non-zero means "no data for
+                  those hours", never "no birds".
+              first_reported_hour_utc: {type: string, nullable: true}
+              last_reported_hour_utc: {type: string, nullable: true}
+              total_tracks: {type: integer}
+              classified_tracks:
+                type: integer
+                description: Tracks the detector put a species on.
+              unclassified_tracks:
+                type: integer
+                description: Tracks counted with no species assigned.
+              species:
+                type: object
+                additionalProperties: {type: integer}
+                example: {corvus_monedula: 41, pica_pica: 12}
+              unknown_species:
+                type: array
+                items: {type: string}
+                description: Species present in the data but not in the vocabulary.
+    '400':
+      description: An unparseable date, a backwards range, or one that is too wide.
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: Sighting statistics are not configured on this server.

@@ -1,0 +1,44 @@
+post:
+  summary: Run the backlog check now
+  description: |
+    Evaluate the filmstrip backlog against the notification threshold
+    immediately rather than waiting for the daily check, posting a
+    `ModuleTrigger` if the state machine decides there is something to say.
+
+    Exists because a once-a-day timer is otherwise impossible to exercise by
+    hand. The state machine is the same one the schedule drives, so a manual
+    run also arms and disarms it — running this repeatedly will fire once and
+    then report `already raised`, which is the intended behaviour rather than
+    a failure.
+
+    `reason` says what was decided: `crossed threshold`, `grew since the last
+    notice`, `below threshold`, `already raised`, `dropped below rearm
+    threshold`, `filmstrip tree unavailable`, `backlog not connected`,
+    `backlog lookup raised`, or `nudge disabled`.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: What the check decided.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [fired, reason]
+            properties:
+              fired:
+                type: boolean
+                description: Whether a trigger was posted.
+              reason:
+                type: string
+                example: crossed threshold
+              pending:
+                type: integer
+                nullable: true
+                description: Absent when the backlog could not be read.
+              nudge:
+                type: object
+                description: The nudge state after the check.
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'

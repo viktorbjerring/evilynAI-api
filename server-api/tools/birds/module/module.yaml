@@ -1,0 +1,71 @@
+get:
+  summary: Birds module status
+  description: |
+    Connection state and configuration of the birds module.
+
+    The module reads two deliberately separate sources — the filmstrip
+    labelling backlog (work waiting for a human) and the detector's own hourly
+    sighting counts (a model's guesses). Each is bound independently by the app
+    layer, so one may be connected while the other is not; `backlog_connected`
+    and `sightings_connected` report them separately rather than as a single
+    flag.
+
+    `nudge` describes the daily backlog check and its current state. It is
+    edge-triggered: `armed` means a notice has already been raised and another
+    will not be until the backlog either drops below the rearm threshold or
+    grows by `regrowth_step`.
+  tags: [tools]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Module status.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, details]
+            properties:
+              name:
+                type: string
+                example: birds
+              details:
+                type: object
+                properties:
+                  backlog_connected:
+                    type: boolean
+                    description: Whether the filmstrip backlog is reachable.
+                  sightings_connected:
+                    type: boolean
+                    description: Whether the sighting store is reachable.
+                  timezone:
+                    type: string
+                    description: IANA zone the module presents times in.
+                    example: Europe/Copenhagen
+                  default_days:
+                    type: integer
+                  max_days:
+                    type: integer
+                  nudge:
+                    type: object
+                    properties:
+                      enabled: {type: boolean}
+                      notify_threshold: {type: integer}
+                      rearm_threshold: {type: integer}
+                      regrowth_step: {type: integer}
+                      check_time: {type: string, example: "09:00"}
+                      notify: {type: boolean}
+                      armed:
+                        type: boolean
+                        description: A notice has been raised and not yet reset.
+                      last_notified_at_count:
+                        type: integer
+                        description: Pending count when the last notice was raised.
+                      last_notified_utc:
+                        type: string
+                        nullable: true
+                      last_checked_utc:
+                        type: string
+                        nullable: true
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'

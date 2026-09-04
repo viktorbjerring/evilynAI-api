@@ -1,0 +1,46 @@
+get:
+  summary: Recent sighting uploads
+  description: |
+    Envelope metadata for recent uploads — when the detector last reported and
+    how much it sent — plus the overall shape of the store.
+
+    Metadata only, deliberately: this answers "is it still talking to us?"
+    without reading any counts. Useful when `hours_missing` is unexpectedly
+    high and the question is whether the producer stopped or the garden did.
+  tags: [birds]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 200, default: 20}
+  responses:
+    '200':
+      description: Recent upload envelopes, newest first.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              uploads:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    upload_id: {type: integer}
+                    received_utc: {type: string}
+                    producer: {type: string}
+                    camera_id: {type: string}
+                    hours_written: {type: integer}
+                    hours_replaced: {type: integer}
+                    first_hour: {type: string, nullable: true}
+                    last_hour: {type: string, nullable: true}
+              hours_stored: {type: integer}
+              first_hour_utc: {type: string, nullable: true}
+              last_hour_utc: {type: string, nullable: true}
+              last_upload_utc: {type: string, nullable: true}
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: Sighting statistics are not configured on this server.

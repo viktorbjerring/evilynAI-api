@@ -1,0 +1,125 @@
+get:
+  summary: List explicit save requests and their outcomes
+  description: |
+    Explicit save requests are what Evilyn flagged mid-conversation via the
+    `memory` tool's `save_memory` action. A save is a **nomination for the
+    nightly dream, not a write**: nothing reaches long-term memory or the
+    personality store until the dream runs and the ordinary filters — the
+    first-person guard, the pair judge, the personality pattern-not-event
+    guards — have had their say.
+
+    This is therefore the only place the outcome of a save is visible.
+    Without it a request that was filtered is indistinguishable from one that
+    was never queued.
+
+    `outcome` is one of:
+      * `pending` — queued, the dream has not looked at it yet.
+      * `stored` — a new memory or trait came out of it.
+      * `reinforced` — it landed on something already known, in place.
+      * `filtered` — a guard dropped it. Not an error: this is the filters
+        doing their job.
+      * `failed` — the consolidation stage raised before reaching a verdict.
+
+    `detail` says which: the memory id it merged into, the
+    `section.category` a trait landed in, or the reason it was dropped.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: state
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [pending, consumed, all]
+        default: all
+      description: Filter to unconsumed requests, consumed ones, or both.
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+      description: Maximum number of requests to return (default all).
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+      description: Rows to skip. Only honoured together with `limit`.
+    - name: include_snapshot
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+      description: |
+        Include the conversation snapshot captured with each request. Omitted
+        by default — it is several KB per request, and a page of them is a
+        payload nobody asked for. `has_snapshot` says whether there is one.
+  responses:
+    '200':
+      description: The save-request queue, newest first
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [count, pending, total, requests]
+            properties:
+              count:
+                type: integer
+                description: Number of requests in this page.
+              pending:
+                type: integer
+                description: Total unconsumed requests, ignoring the filters.
+              total:
+                type: integer
+                description: Total requests held, ignoring the filters.
+              requests:
+                type: array
+                items:
+                  type: object
+                  required: [id, kind, content, outcome]
+                  properties:
+                    id:
+                      type: string
+                      description: Request id, e.g. `20260909-143502-01`.
+                    kind:
+                      type: string
+                      enum: [memory, personality]
+                      description: Which store the request is aimed at.
+                    content:
+                      type: string
+                      description: What was asked to be remembered.
+                    created_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    consumed_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                      description: Null while the request is still pending.
+                    outcome:
+                      type: string
+                      enum: [pending, stored, reinforced, filtered, failed]
+                    detail:
+                      type: string
+                      description: Why, or what it landed on.
+                    has_snapshot:
+                      type: boolean
+                    snapshot:
+                      type: string
+                      description: Only present with `include_snapshot=true`.
+    '400':
+      description: Unknown `state` value
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'

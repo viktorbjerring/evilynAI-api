@@ -1,0 +1,43 @@
+delete:
+  summary: Drop a save request
+  description: |
+    Removes one explicit save request. The escape hatch for a save queued in
+    error: without it the only way out is waiting for the nightly dream to
+    fold it in and then deleting whatever it produced.
+
+    A consumed request can be dropped too — that removes the record of what
+    happened to it, not the memory or trait it produced.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: request_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Id of the save request to delete, e.g. `20260909-143502-01`.
+  responses:
+    '200':
+      description: The save request was deleted
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [deleted]
+            properties:
+              deleted:
+                type: string
+                description: Id of the deleted request.
+    '404':
+      description: No save request with that id exists
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'

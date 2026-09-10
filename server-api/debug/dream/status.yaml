@@ -2,7 +2,19 @@ get:
   summary: Get dream pipeline last-run status
   description: |
     Returns the outcome of the most recent dream pipeline execution.
-    `last_status` is `"never"` if the pipeline has never run.
+    `last_status` is `"never"` if the pipeline has never run, `"skipped"` if
+    the extraction chunk was below the token threshold, `"no_work"` if there
+    was nothing unextracted, `"partial"` if the run happened but one of its two
+    stages (memory extraction, personality consolidation) raised, and `"ok"`
+    otherwise. The two stages are deliberately independent — one failing does
+    not abort the other — so `"partial"` is what stops a half-completed night
+    reading as a clean one.
+
+    The save-request counts distinguish "the dream ran and my save was
+    filtered" from "the dream has not seen it yet" — see
+    `GET /debug/memory/saves` for the per-request outcome. A pending save
+    request also bypasses the token threshold, so a run with one never reports
+    `"skipped"`.
   tags: [debug]
   security:
     - bearerAuth: []
@@ -22,7 +34,15 @@ get:
                 description: ISO timestamp of the last completed run, or null if never run
               last_status:
                 type: string
-                enum: [never, no_work, ok]
+                enum: [never, skipped, no_work, partial, ok]
                 description: Outcome of the last run
+              last_save_requests:
+                type: integer
+                description: >-
+                  Explicit save requests consumed by the last run. Zero on a
+                  run that had none.
+              pending_save_requests:
+                type: integer
+                description: Save requests still queued for the next run.
     '401':
       $ref: '../../openapi.yaml#/components/responses/Unauthorized'

@@ -37,7 +37,9 @@ get:
                   properties:
                     role:
                       type: string
-                      enum: [user, assistant, system, tool_call, tool_result, thinking]
+                      enum:
+                        [user, assistant, system, tool_call, tool_result,
+                         tool_selection, thinking]
                       description: Conversation role of the message.
                     content:
                       description: |
@@ -48,6 +50,11 @@ get:
                         - `tool_call`: the parsed JSON array of tool calls,
                           each `{name, arguments}`.
                         - `tool_result`: the parsed JSON object `{tool, result}`.
+                        - `tool_selection`: the parsed JSON object `{tool}`,
+                          naming the tool whose actions were loaded, or `null`
+                          when the assistant dropped back to the tool overview.
+                          A selection is a change to the tool surface rather
+                          than tool output, so it carries no result.
                       oneOf:
                         - type: string
                         - type: object
@@ -73,6 +80,20 @@ get:
                               type: string
                             result:
                               type: string
+                        # `tool_selection`. additionalProperties is false so a
+                        # `{tool, result}` payload cannot match both this branch
+                        # and the one above it, which `oneOf` forbids.
+                        - type: object
+                          required: [tool]
+                          additionalProperties: false
+                          properties:
+                            tool:
+                              type: string
+                              nullable: true
+                              description: >-
+                                The tool whose actions were loaded, or `null`
+                                when the assistant dropped back to the tool
+                                overview.
                     timestamp:
                       type: string
                       format: date-time

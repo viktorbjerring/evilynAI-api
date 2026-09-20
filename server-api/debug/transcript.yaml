@@ -23,7 +23,9 @@ get:
                   properties:
                     role:
                       type: string
-                      enum: [user, assistant, system, tool_call, tool_result, thinking]
+                      enum:
+                        [user, assistant, system, tool_call, tool_result,
+                         tool_selection, thinking]
                       description: Conversation role of the message.
                     content:
                       type: string

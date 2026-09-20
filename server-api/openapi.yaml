@@ -236,7 +236,11 @@ components:
                 not seen any of it, and that the message she is about to write
                 is the first thing they read. That assertion is correctness
                 rather than tuning -- an override that drops it reintroduces the
-                answer phase mistaking its reasoning for a delivered reply.
+                answer phase mistaking its reasoning for a delivered reply. It
+                covers earlier turns' notes too, which the `ephemeral` window
+                puts in the context when enabled: those were never spoken
+                either, and without the distinction the same failure returns
+                displaced by one turn.
             answer_prompt:
               type: string
               description: >-
@@ -300,6 +304,29 @@ components:
               minimum: 0
               maximum: 1
               description: Minimum confidence for a trait to be surfaced.
+            context_max_per_category:
+              type: integer
+              minimum: 0
+              description: >-
+                Cap on how many traits each category contributes to the
+                inference system prompt. `0` is unlimited -- the whole store,
+                as before sampling existed. Above zero an over-full category is
+                *drawn from* rather than truncated, weighted by confidence, so
+                a well-evidenced trait shows up most turns and a tentative one
+                occasionally instead of the same few winning for months. The
+                draw happens once per turn, so both phases of a thinking run
+                see the same traits, and it never reaches below
+                `min_confidence`. The nightly consolidator is unaffected: it
+                reads the full store, or it would re-add traits it could not
+                see.
+            context_sampling_exponent:
+              type: number
+              minimum: 0
+              description: >-
+                Shapes that draw -- a trait's weight is
+                `confidence ** exponent`. `0` is a uniform draw over everything
+                above the floor, `1` is proportional to confidence, and higher
+                values concentrate on the best-evidenced traits.
             merge_similarity_threshold:
               type: number
               minimum: 0
@@ -351,6 +378,55 @@ components:
                   type: integer
                   minimum: 1
                   description: Maximum number of rolling summaries retained before merging.
+        ephemeral:
+          type: object
+          description: >-
+            How much of a past turn's private working reaches the model
+            (`EphemeralConfig`). An *ephemeral block* is one unbroken run of
+            thinking, tool-selection, tool-call and tool-result turns, ending
+            in the reply it produced. Blocks never become turns of their own:
+            each is rendered as delimited text and prefixed to its own
+            assistant turn. The same settings are what the transcript buffer
+            measures its summarisation budget against, so the budget always
+            tracks the payload actually sent. Restart-only -- unlike
+            `inference`, this section has two readers and cannot be swapped in
+            one of them alone.
+          properties:
+            turns:
+              type: integer
+              minimum: -1
+              description: >-
+                How many blocks reach the model. `0` is off, and the default:
+                only the current run's own reasoning is in context, as before
+                the window existed. `-1` is unlimited. `N > 0` keeps the newest
+                `N`. Blocks are counted, not turns -- a reply that did no
+                thinking and called no tools produces none and consumes no
+                slot.
+            open_delimiter:
+              type: string
+              description: >-
+                Opens a rendered block. Must stay visibly distinct from the
+                answer phase's `[PRIVATE REASONING]` markers: in a two-phase
+                answer call the model can see both kinds at once, and two
+                identically-marked blocks meaning different things is the
+                confusion the markers exist to prevent.
+            close_delimiter:
+              type: string
+              description: Closes a rendered block.
+            entry_char_cap:
+              type: integer
+              minimum: 0
+              description: >-
+                Per-entry character cap inside a block. Over-budget entries are
+                squeezed harder, oldest and tool plumbing first, and every cut
+                is marked.
+            block_char_budget:
+              type: integer
+              minimum: 0
+              description: >-
+                Character budget for a whole rendered block. With `turns` at
+                `-1` this and `entry_char_cap` are the only bound on how much a
+                single large tool result can occupy.
         scheduler:
           type: object
           description: Internal nightly dream scheduler tuning.

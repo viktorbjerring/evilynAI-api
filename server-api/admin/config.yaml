@@ -130,7 +130,7 @@ patch:
                   type: string
                 example:
                   - "Unknown field: 'ltm.bogus_field'"
-                  - "'scheduler.schedule_hour' must be between 0 and 23"
+                  - "'ltm.min_score' must be between 0 and 1"
                   - "inference.answer_prompt must not be blank"
     '401':
       $ref: '../openapi.yaml#/components/responses/Unauthorized'

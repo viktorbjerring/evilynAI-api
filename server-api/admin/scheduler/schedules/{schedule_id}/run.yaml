@@ -1,0 +1,51 @@
+post:
+  summary: Run a server schedule now
+  description: |
+    Starts a run immediately (cause `manual`), whatever its `next_run` and
+    whether or not it is paused; the schedule's timing is untouched. Returns
+    as soon as the run has started — poll
+    `GET /debug/scheduler/schedules/{schedule_id}` or
+    `GET /debug/scheduler/runs` for the outcome.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '202':
+      description: Run started
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [run_id, status]
+            properties:
+              run_id:
+                type: string
+              status:
+                type: string
+                enum: [running]
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No schedule with that id.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '409':
+      description: The schedule already has a run in flight.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'

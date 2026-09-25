@@ -1,0 +1,51 @@
+post:
+  summary: Create a server schedule
+  description: |
+    Creates a schedule and arms it: `next_run` is the first occurrence after
+    now (UTC). Steps are validated against the job catalogue
+    (`GET /debug/scheduler/jobs`) — an unknown job, an unknown param, or a
+    wrongly-typed one is refused, with every problem reported at once.
+
+    Steps run in order when the schedule fires, and a failed step never stops
+    the ones after it. Put module syncs ahead of `dream` so the dream reads
+    fresh data, and `reprocess` after it so the pass sees that night's writes.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../../openapi.yaml#/components/schemas/ScheduleInput'
+  responses:
+    '201':
+      description: Created
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schedule]
+            properties:
+              schedule:
+                $ref: '../../../openapi.yaml#/components/schemas/ServerSchedule'
+    '400':
+      description: Invalid body; every problem at once.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/ValidationErrors'
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'
+    '409':
+      description: A schedule with that id already exists.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'

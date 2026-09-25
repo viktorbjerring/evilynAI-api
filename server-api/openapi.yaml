@@ -427,26 +427,6 @@ components:
                 Character budget for a whole rendered block. With `turns` at
                 `-1` this and `entry_char_cap` are the only bound on how much a
                 single large tool result can occupy.
-        scheduler:
-          type: object
-          description: Internal nightly dream scheduler tuning.
-          properties:
-            enabled:
-              type: boolean
-              description: Whether the nightly dream scheduler runs at all.
-            schedule_hour:
-              type: integer
-              minimum: 0
-              maximum: 23
-              description: Local hour (0-23) at which the nightly dream pipeline fires.
-            schedule_minute:
-              type: integer
-              minimum: 0
-              maximum: 59
-              description: Local minute (0-59) at which the nightly dream pipeline fires.
-            catchup_on_boot:
-              type: boolean
-              description: Whether a missed nightly run fires immediately on server boot.
       example:
         inference:
           answer_prompt: >-
@@ -474,11 +454,323 @@ components:
           summarizer:
             window_size: 5
             max_summaries: 20
-        scheduler:
-          enabled: true
-          schedule_hour: 3
-          schedule_minute: 30
-          catchup_on_boot: true
+
+    SchedulerJob:
+      type: object
+      description: >-
+        One entry of the server scheduler's job catalogue — a server-side call
+        a schedule step may name. `trigger` jobs post to the AI's trigger bus
+        and report `queued`; `direct` jobs run on the scheduler's worker and
+        report the module's own result. Module jobs are ids of the form
+        `<tool>.<name>` and exist only while that module is loaded.
+      required: [id, kind, description, parameters]
+      properties:
+        id:
+          type: string
+          example: "calendar.sync"
+        kind:
+          type: string
+          enum: [trigger, direct]
+        description:
+          type: string
+        parameters:
+          type: array
+          description: >-
+            The step `params` this job accepts. Same shape as an admin-action
+            parameter, without the HTTP location key. Unknown params are
+            rejected when a schedule is saved.
+          items:
+            type: object
+            required: [name, type, required, description]
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+                enum: [string, integer, number, boolean, array, object]
+              required:
+                type: boolean
+              description:
+                type: string
+              default:
+                description: Applied at run time when the step omits the param.
+              enum:
+                type: array
+                items:
+                  type: string
+              example: {}
+
+    ScheduleRecurrence:
+      type: object
+      description: >-
+        When a server schedule fires. **Every field is UTC**: `time_utc` is a
+        UTC wall time and `days` are UTC weekdays / days of the month. A client
+        converting to local time must convert `days` together with
+        `time_utc` — the day can change in conversion (Thursday 00:30 in
+        Copenhagen is Wednesday 22:30 UTC). Because the rule is fixed in UTC,
+        its local time shifts by an hour across a DST change.
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [once, daily, weekly, monthly]
+        at:
+          type: string
+          format: date-time
+          description: >-
+            `once` only. Must carry an offset or `Z` (a naive timestamp is
+            refused rather than guessed at) and lie in the future when saved.
+        time_utc:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: '`daily`/`weekly`/`monthly`: HH:MM, 24-hour, UTC.'
+          example: "07:00"
+        day_interval:
+          type: integer
+          minimum: 1
+          maximum: 366
+          default: 1
+          description: >-
+            `daily` only: every N days, keeping its phase. The first run
+            (on create, on a changed recurrence, on resume) is the next
+            `time_utc` slot, however large N is; the interval governs the
+            gaps after it.
+        days:
+          type: array
+          description: >-
+            `weekly`: UTC weekday names (`Mon` … `Sun`, case-insensitive,
+            stored in calendar order). `monthly`: UTC days of the month
+            1–31; a month without the day is skipped, not moved.
+          items:
+            oneOf:
+              - type: string
+                enum: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+              - type: integer
+                minimum: 1
+                maximum: 31
+      example:
+        kind: weekly
+        time_utc: "07:00"
+        days: [Thu]
+
+    ScheduleStep:
+      type: object
+      required: [job]
+      properties:
+        job:
+          type: string
+          description: A job id from `GET /debug/scheduler/jobs`.
+          example: "dream"
+        params:
+          type: object
+          additionalProperties: true
+          description: >-
+            Stored exactly as given; declared defaults are applied at run
+            time. Validated against the job's parameters when saved.
+
+    ScheduleStepOutcome:
+      type: object
+      required: [job, status]
+      properties:
+        job:
+          type: string
+        status:
+          type: string
+          enum: [ok, queued, error, unavailable]
+          description: >-
+            `queued` — a trigger job reached the bus (never `ok`: posting is
+            all the scheduler knows; the dream's own outcome is at
+            `GET /debug/dream/status`). `error` — the job raised or its result
+            carried a non-`ok` status. `unavailable` — no such job is loaded
+            on the server right now.
+        result:
+          type: object
+          additionalProperties: true
+          description: "A direct job's own result dict (sync counts, or `{\"status\": \"offline\"}`)."
+        error:
+          type: string
+          description: The exception message when the job raised.
+
+    ScheduleRun:
+      type: object
+      description: One execution of a server schedule.
+      required: [run_id, schedule_id, cause, status, started_at, finished_at, steps]
+      properties:
+        run_id:
+          type: string
+          example: "20260924T070000Z-thursday-review"
+        schedule_id:
+          type: string
+        cause:
+          type: string
+          enum: [scheduled, catchup, manual]
+          description: >-
+            `catchup` — the server was down across an occurrence and the
+            schedule's `catchup` flag made it fire once on boot.
+        status:
+          type: string
+          enum: [running, ok, partial, error, skipped]
+          description: >-
+            `ok` when every step was `ok`/`queued`, `error` when none was,
+            `partial` otherwise. Steps always run in order and a failed step
+            never stops the ones after it. `skipped` — nothing ran; `reason`
+            says why (a previous run still in flight, or an occurrence missed
+            while down with `catchup` off).
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleStepOutcome'
+
+    ServerSchedule:
+      type: object
+      description: >-
+        An operator-defined server schedule: a UTC recurrence plus the ordered
+        job steps it runs. Not Evilyn's own `schedule` tool — she cannot see
+        or cancel these.
+      required:
+        - id
+        - label
+        - enabled
+        - catchup
+        - recurrence
+        - recurrence_description
+        - steps
+        - state
+        - next_run
+        - created_at
+        - running
+        - last_run
+        - warnings
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9_-]{1,40}$'
+          description: Client-chosen, unique, immutable — the URL handle.
+        label:
+          type: string
+        enabled:
+          type: boolean
+        catchup:
+          type: boolean
+          description: >-
+            Whether an occurrence missed while the server was down fires once
+            on boot. Missed occurrences never fire more than once.
+        recurrence:
+          $ref: '#/components/schemas/ScheduleRecurrence'
+        recurrence_description:
+          type: string
+          example: "weekly on Thu at 07:00 UTC"
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleStep'
+        state:
+          type: string
+          enum: [active, paused, finished]
+          description: '`finished` — a `once` schedule that has had its run.'
+        next_run:
+          type: string
+          format: date-time
+          nullable: true
+          description: UTC. Null while paused, and for a finished `once` schedule.
+        created_at:
+          type: string
+          format: date-time
+        running:
+          type: boolean
+          description: A run of this schedule is in flight.
+        current_run:
+          type: object
+          nullable: true
+          description: >-
+            The in-flight run with the steps finished so far. Only on
+            `GET /debug/scheduler/schedules/{schedule_id}`; null elsewhere.
+          allOf:
+            - $ref: '#/components/schemas/ScheduleRun'
+        last_run:
+          type: object
+          nullable: true
+          description: >-
+            The newest finished run (skips are not runs). A summary — run_id,
+            status, cause, started_at, finished_at — in lists; the full
+            `ScheduleRun` on the single-schedule read.
+          additionalProperties: true
+        warnings:
+          type: array
+          items:
+            type: string
+          description: >-
+            One entry per step whose job is not loaded right now. Such a step
+            is kept, not dropped, and reports `unavailable` when run.
+
+    ScheduleInput:
+      type: object
+      description: >-
+        Body of `POST /admin/scheduler/schedules` (all of `id`, `recurrence`,
+        `steps` required) and `PATCH …/{schedule_id}` (every field optional;
+        `id` refused). Unknown fields are rejected, at every level.
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9_-]{1,40}$'
+        label:
+          type: string
+          maxLength: 200
+          description: Defaults to the id.
+        enabled:
+          type: boolean
+          default: true
+          description: >-
+            Pausing clears `next_run`; resuming re-arms it from now, so a
+            paused stretch is never caught up on.
+        catchup:
+          type: boolean
+          default: true
+        recurrence:
+          $ref: '#/components/schemas/ScheduleRecurrence'
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ScheduleStep'
+      example:
+        id: thursday-review
+        label: Thursday review reminder
+        catchup: false
+        recurrence:
+          kind: weekly
+          time_utc: "07:00"
+          days: [Thu]
+        steps:
+          - job: calendar.sync
+          - job: schedule.add_single
+            params:
+              label: weekly-review
+              intent: Ask how the week went
+              delay_hours: 11
+
+    ValidationErrors:
+      type: object
+      description: Every problem with the request, at once.
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+          example:
+            - "recurrence.time_utc: must be HH:MM (24-hour, UTC)"
+            - "steps[1].params.forse: unknown parameter for job 'dream'"
 
     TasksConnectionState:
       type: object

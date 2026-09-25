@@ -1,0 +1,64 @@
+get:
+  summary: List server schedule runs
+  description: |
+    Run history, newest first — every run of every schedule (or of one, with
+    `schedule`), including `skipped` records. The history keeps the newest
+    500 runs.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Only runs of this schedule id.
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: A page of runs
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [runs, count, total]
+            properties:
+              runs:
+                type: array
+                items:
+                  $ref: '../../openapi.yaml#/components/schemas/ScheduleRun'
+              count:
+                type: integer
+                description: Runs on this page.
+              total:
+                type: integer
+                description: Runs matching the filter across all pages.
+    '400':
+      description: '`limit` or `offset` is malformed or out of range.'
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

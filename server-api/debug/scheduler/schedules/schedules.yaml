@@ -1,0 +1,33 @@
+get:
+  summary: List server schedules
+  description: |
+    Every server schedule, soonest `next_run` first; paused and finished ones
+    last. `last_run` is a summary here — read one schedule for the full run
+    and any run in flight. All times are UTC.
+
+    These are the operator's server schedules, not Evilyn's own (those are at
+    `GET /tools/schedule/module/schedules`).
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The schedules
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schedules]
+            properties:
+              schedules:
+                type: array
+                items:
+                  $ref: '../../../openapi.yaml#/components/schemas/ServerSchedule'
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'

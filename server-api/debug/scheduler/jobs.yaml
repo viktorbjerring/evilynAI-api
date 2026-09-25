@@ -1,0 +1,35 @@
+get:
+  summary: List the server scheduler's job catalogue
+  description: |
+    Every job a schedule step may name right now. Core jobs (`dream`,
+    `reprocess`) are always present; module jobs (`<tool>.<name>`, e.g.
+    `calendar.sync`, `schedule.add_single`) exist only while that module is
+    loaded. A client builds its step picker and params form from this list
+    rather than hardcoding one.
+
+    `summarize` is deliberately absent: summarisation runs when the transcript
+    needs it, not on a clock.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The catalogue
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [jobs]
+            properties:
+              jobs:
+                type: array
+                items:
+                  $ref: '../../openapi.yaml#/components/schemas/SchedulerJob'
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

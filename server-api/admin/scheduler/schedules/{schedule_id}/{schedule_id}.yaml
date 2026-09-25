@@ -1,0 +1,100 @@
+patch:
+  summary: Update a server schedule
+  description: |
+    Partial update — only the fields sent change. `id` is immutable (delete
+    and recreate to rename).
+
+    A changed `recurrence` re-arms `next_run` from now. Pausing
+    (`enabled: false`) clears `next_run`; resuming re-arms it from now, so a
+    paused stretch is never caught up on. Replacing `steps` takes effect on
+    the next run; one already in flight finishes with the steps it started
+    with.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../../../openapi.yaml#/components/schemas/ScheduleInput'
+        example:
+          enabled: false
+  responses:
+    '200':
+      description: Updated
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schedule]
+            properties:
+              schedule:
+                $ref: '../../../../openapi.yaml#/components/schemas/ServerSchedule'
+    '400':
+      description: Invalid body; every problem at once.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/ValidationErrors'
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No schedule with that id.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+delete:
+  summary: Delete a server schedule
+  description: |
+    Removes the schedule. A run already in flight finishes and is recorded;
+    the schedule's past runs stay in the history. Deleting every schedule that
+    runs `dream` stops memory consolidation — `GET /debug/scheduler/status`
+    reports `dream_scheduled: false` when that is the case.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Deleted
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [deleted]
+            properties:
+              deleted:
+                type: string
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No schedule with that id.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'

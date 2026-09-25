@@ -1,0 +1,39 @@
+get:
+  summary: Get one server schedule
+  description: |
+    One schedule, with `last_run` as the full run record and `current_run`
+    set while a run is in flight (its finished steps so far).
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: The schedule
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schedule]
+            properties:
+              schedule:
+                $ref: '../../../openapi.yaml#/components/schemas/ServerSchedule'
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No schedule with that id.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'

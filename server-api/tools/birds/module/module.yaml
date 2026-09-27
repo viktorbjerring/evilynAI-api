@@ -10,10 +10,16 @@ get:
     and `sightings_connected` report them separately rather than as a single
     flag.
 
-    `nudge` describes the daily backlog check and its current state. It is
-    edge-triggered: `armed` means a notice has already been raised and another
-    will not be until the backlog either drops below the rearm threshold or
-    grows by `regrowth_step`.
+    `nudge` describes the daily backlog check and its current state. It
+    measures reviewer attention — how long the oldest undecided track has been
+    in the labelling queue — not how full the queue is: the producer refills
+    `inbox/` to its 300-track cap on every pass, so a full queue is the steady
+    state. It is edge-triggered twice over: `armed` means an age notice has
+    been raised and another will not be until the oldest wait drops below
+    `rearm_age_days`, grows by `remind_after_days`, or the producer's
+    undecided total grows by `regrowth_step`; `stale_armed` means "the detector
+    has stopped reporting" has been said and will not be again until a fresh
+    `status.json` arrives.
   tags: [tools]
   security:
     - bearerAuth: []
@@ -38,6 +44,16 @@ get:
                   sightings_connected:
                     type: boolean
                     description: Whether the sighting store is reachable.
+                  status_connected:
+                    type: boolean
+                    description: |
+                      Whether the producer's `status.json` reader is bound.
+                      Bound does not mean a file is present — an absent file is
+                      reported as `producer.reported: false` on the backlog read.
+                  status_stale_hours:
+                    type: number
+                    description: A `status.json` older than this is stale.
+                    example: 36
                   timezone:
                     type: string
                     description: IANA zone the module presents times in.
@@ -50,18 +66,51 @@ get:
                     type: object
                     properties:
                       enabled: {type: boolean}
-                      notify_threshold: {type: integer}
-                      rearm_threshold: {type: integer}
-                      regrowth_step: {type: integer}
+                      notify_age_days:
+                        type: number
+                        description: Oldest wait (days) at which a notice is raised.
+                        example: 7
+                      rearm_age_days:
+                        type: number
+                        description: Oldest wait (days) below which the age notice re-arms.
+                        example: 3.5
+                      remind_after_days:
+                        type: number
+                        description: While raised, speak again after this many more days of waiting.
+                        example: 7
+                      regrowth_step:
+                        type: integer
+                        description: |
+                          While raised, speak again when the producer's
+                          `undecided_tracks` has grown by this much. Never host
+                          `pending`.
                       check_time: {type: string, example: "09:00"}
                       notify: {type: boolean}
+                      version:
+                        type: integer
+                        description: State file version (2).
+                        example: 2
                       armed:
                         type: boolean
-                        description: A notice has been raised and not yet reset.
-                      last_notified_at_count:
-                        type: integer
-                        description: Pending count when the last notice was raised.
+                        description: An age notice has been raised and not yet reset.
                       last_notified_utc:
+                        type: string
+                        nullable: true
+                      last_notified_age_days:
+                        type: number
+                        nullable: true
+                        description: Oldest wait when the last age notice was raised.
+                      last_notified_undecided:
+                        type: integer
+                        nullable: true
+                        description: |
+                          The producer's undecided total when the last notice
+                          was raised — the growth baseline. Null when the notice
+                          was raised on host data alone.
+                      stale_armed:
+                        type: boolean
+                        description: The "detector stopped reporting" notice has been said.
+                      stale_notified_utc:
                         type: string
                         nullable: true
                       last_checked_utc:

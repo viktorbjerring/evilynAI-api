@@ -1,19 +1,28 @@
 post:
   summary: Run the backlog check now
   description: |
-    Evaluate the filmstrip backlog against the notification threshold
-    immediately rather than waiting for the daily check, posting a
-    `ModuleTrigger` if the state machine decides there is something to say.
+    Evaluate the backlog nudge immediately rather than waiting for the daily
+    check, posting a `ModuleTrigger` if either state machine decides there is
+    something to say.
+
+    The signal is the age of the oldest undecided track in the labelling queue:
+    `backlog.oldest_shipped_utc` from a fresh `status.json` (`age_source:
+    producer`), falling back to the host's own `oldest_pending_arrived_utc`
+    when the file is absent or stale (`age_source: host`). A stale
+    `status.json` is also its own one-off notice.
 
     Exists because a once-a-day timer is otherwise impossible to exercise by
-    hand. The state machine is the same one the schedule drives, so a manual
-    run also arms and disarms it — running this repeatedly will fire once and
-    then report `already raised`, which is the intended behaviour rather than
-    a failure.
+    hand. The state machines are the ones the schedule drives, so a manual
+    run also arms and disarms them — running this repeatedly will fire once
+    and then report `already raised`, which is the intended behaviour rather
+    than a failure.
 
-    `reason` says what was decided: `crossed threshold`, `grew since the last
-    notice`, `below threshold`, `already raised`, `dropped below rearm
-    threshold`, `filmstrip tree unavailable`, `backlog not connected`,
+    `reason` says what was decided. When it fired, one or both of
+    `oldest track waited too long` / `still waiting since the last notice` /
+    `backlog grew since the last notice` and `detector stopped reporting`,
+    joined with `; `. When it did not: `below threshold`, `already raised`,
+    `oldest wait back under rearm age`, `nothing waiting`,
+    `filmstrip tree unavailable`, `backlog not connected`,
     `backlog lookup raised`, or `nudge disabled`.
   tags: [tools]
   security:
@@ -36,7 +45,24 @@ post:
               pending:
                 type: integer
                 nullable: true
-                description: Absent when the backlog could not be read.
+                description: Host queue size. Absent when the backlog could not be read.
+              undecided:
+                type: integer
+                nullable: true
+                description: The producer's undecided total, from a fresh status.json only.
+              oldest_waiting_days:
+                type: number
+                nullable: true
+                description: Age of the oldest undecided track in the queue.
+              age_source:
+                type: string
+                nullable: true
+                enum: [producer, host, null]
+                description: Which side the age came from.
+              producer_stale:
+                type: boolean
+                nullable: true
+                description: Null when there is no status.json.
               nudge:
                 type: object
                 description: The nudge state after the check.

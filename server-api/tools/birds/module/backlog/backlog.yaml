@@ -12,6 +12,16 @@ get:
     `undelivered_verdicts` covers only decisions still sitting in the tree. The
     detector removes each one once it has merged it, so this is outstanding
     work — never a history of what has been labelled.
+
+    `pending` is only what is in the labelling queue here, which the producer
+    caps at 300 and refills on every pass — it is not the backlog. `producer`
+    is a summary of the producer's `status.json` (filmstrip contract §10): the
+    true backlog, how long the oldest track has waited, per-class labelling
+    coverage, aggregate counts of what the model thinks is waiting, and the
+    last labelling pass's score. Figures the producer did not send are left
+    out, never shown as zero. `probable_waiting` is per species and nothing
+    finer: no model opinion about a specific track is exposed anywhere
+    (contract §5a).
   tags: [tools]
   security:
     - bearerAuth: []
@@ -38,8 +48,20 @@ get:
                   pending: {type: integer}
                   decided: {type: integer}
                   total: {type: integer}
-                  oldest_pending_utc: {type: string, nullable: true}
+                  oldest_pending_utc:
+                    type: string
+                    nullable: true
+                    description: Capture time of the oldest pending track. Context, not an alarm.
                   oldest_pending_local: {type: string, nullable: true}
+                  oldest_pending_arrived_utc:
+                    type: string
+                    nullable: true
+                    description: |
+                      When the longest-waiting pending track entered the queue
+                      (earliest `track.json` mtime; the sync preserves mtimes).
+                      The host's own estimate of the producer's
+                      `oldest_shipped_utc`.
+                  oldest_pending_arrived_local: {type: string, nullable: true}
                   timezone: {type: string, example: Europe/Copenhagen}
                   undelivered_verdicts:
                     type: object
@@ -48,6 +70,87 @@ get:
                       groups: {type: object, additionalProperties: {type: integer}}
                       species: {type: object, additionalProperties: {type: integer}}
                       actions: {type: object, additionalProperties: {type: integer}}
+                  producer:
+                    type: object
+                    description: The producer's status.json, summarised.
+                    required: [reported]
+                    properties:
+                      reported:
+                        type: boolean
+                        description: |
+                          False when there is no usable `status.json` (absent,
+                          unreadable, or a schema other than 1) — no
+                          information, not an empty backlog. Only `note` follows.
+                      note: {type: string, description: Present when not reported, or when stale.}
+                      as_of_local: {type: string, description: "`generated_utc`, local."}
+                      hours_old: {type: number}
+                      stale:
+                        type: boolean
+                        description: Older than `status_stale_hours` — the producer has stopped reaching the host.
+                      backlog:
+                        type: object
+                        properties:
+                          undecided: {type: integer, description: Every labellable track with no label, shipped or not.}
+                          in_queue: {type: integer, description: Undecided tracks shipped to `inbox/`.}
+                          held_on_detector: {type: integer, description: Undecided tracks the cap keeps on the producer.}
+                          oldest_waiting_since_local: {type: string, description: "`oldest_shipped_utc`, local."}
+                          oldest_waiting_days: {type: number}
+                          oldest_undecided_captured_local: {type: string}
+                      coverage:
+                        type: object
+                        properties:
+                          min_days_to_evaluate: {type: integer}
+                          evaluable:
+                            type: object
+                            description: Species → `{days, crop_labels}`, for classes that can be scored.
+                            additionalProperties:
+                              type: object
+                              properties:
+                                days: {type: integer}
+                                crop_labels: {type: integer}
+                          not_yet_evaluable:
+                            type: object
+                            description: Same shape, for labelled classes short of `min_days_to_evaluate`.
+                            additionalProperties: {type: object}
+                          no_labels:
+                            type: array
+                            items: {type: string}
+                      probable_waiting:
+                        type: object
+                        description: |
+                          Species → `{total, from_new_days}`: undecided tracks the
+                          model calls this species at ≥ the prediction threshold,
+                          and the subset from days the species has no
+                          crop-grounded label on. Aggregate model opinion only.
+                        additionalProperties:
+                          type: object
+                          properties:
+                            total: {type: integer}
+                            from_new_days: {type: integer}
+                      predictions:
+                        type: object
+                        properties:
+                          model: {type: string}
+                          made_local: {type: string}
+                          threshold: {type: number}
+                          counts_are_a_floor:
+                            type: boolean
+                            description: Present (true) when fewer tracks were predicted than are undecided.
+                      last_pass:
+                        type: object
+                        properties:
+                          model: {type: string}
+                          labels_through_local: {type: string}
+                          scored: {type: integer}
+                          agreement: {type: number}
+                          by_confidence:
+                            type: object
+                            description: '"min-max" band → `{scored, agreement}`.'
+                            additionalProperties: {type: object}
+                          per_class:
+                            type: object
+                            description: Species → `{support, precision, recall}`.
+                            additionalProperties: {type: object}
               nudge:
                 type: object
                 description: Same shape as `details.nudge` on the module root.

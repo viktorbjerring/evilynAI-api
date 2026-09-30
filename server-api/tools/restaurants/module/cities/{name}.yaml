@@ -1,0 +1,134 @@
+patch:
+  summary: Edit a city
+  description: |
+    Rename a city, change its country, or replace its alias list (`aliases: []`
+    clears it; omitting the key keeps it). Entries and the current city follow a
+    rename.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: name
+    in: path
+    required: true
+    description: City name or alias.
+    schema:
+      type: string
+      example: Aarhus
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            new_name:
+              type: string
+            country:
+              type: string
+            aliases:
+              type: array
+              nullable: true
+              items:
+                type: string
+  responses:
+    '200':
+      description: The updated city.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/RestaurantCity
+    '400':
+      description: Validation failed; every problem is listed.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/RestaurantValidationErrors
+    '404':
+      description: No such city
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: Name or alias already taken
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+delete:
+  summary: Delete a city
+  description: |
+    Delete a city. Refused with 409 while entries use it or while it is the
+    current city, unless `replace_with` names a city to take them over: entries
+    move there, the deleted city's name and aliases become aliases of the
+    replacement (so input that used to resolve still does), and the current city
+    moves too if it was this one.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: name
+    in: path
+    required: true
+    description: City name or alias.
+    schema:
+      type: string
+      example: Aarhus
+  - name: replace_with
+    in: query
+    required: false
+    description: City to move entries and the current city to.
+    schema:
+      type: string
+  responses:
+    '200':
+      description: Deleted.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/RestaurantVocabDeletion
+    '404':
+      description: No such city (or no such replacement)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: Still referenced, is the current city, or replace_with names the same city
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

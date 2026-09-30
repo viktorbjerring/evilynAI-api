@@ -1,0 +1,209 @@
+get:
+  summary: Get a restaurant
+  description: |
+    Fetch one entry by id.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: restaurant_id
+    in: path
+    required: true
+    description: Entry id.
+    schema:
+      type: string
+      example: 4c3e472ca348
+  responses:
+    '200':
+      description: The entry.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/Restaurant
+    '404':
+      description: No such entry
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+patch:
+  summary: Update a restaurant
+  description: |
+    Change fields of an entry. Only keys present in the body change. `null`
+    clears `score`, `price`, `format`, `address` or `place_id`; `city` cannot be
+    cleared. `cuisine` replaces the whole list.
+
+    Moving `wishlist` → `visited` must supply `score` in the same body. Moving
+    `visited` → `wishlist` must send `score: null` explicitly — the score is
+    discarded, so it is never dropped as a side effect. A rename that would
+    duplicate another entry in the city is a 409.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: restaurant_id
+    in: path
+    required: true
+    description: Entry id.
+    schema:
+      type: string
+      example: 4c3e472ca348
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            status:
+              type: string
+              enum:
+              - visited
+              - wishlist
+            score:
+              type: number
+              nullable: true
+              description: 1.0–10.0; rounded half-up to one decimal. Required for visited,
+                forbidden for wishlist.
+            price:
+              type: integer
+              nullable: true
+              description: DKK per person, positive.
+            cuisine:
+              type: array
+              items:
+                type: string
+              description: Values from the cuisine vocabulary (matched case-/accent-insensitively,
+                stored canonically).
+            format:
+              type: string
+              nullable: true
+              description: One value from the format vocabulary.
+            description:
+              type: string
+            city:
+              type: string
+              description: City name or alias.
+            address:
+              type: string
+              nullable: true
+              description: Reserved; not used yet.
+            place_id:
+              type: string
+              nullable: true
+              description: Reserved; not used yet. When set, it (not the name) is the duplicate
+                key.
+  responses:
+    '200':
+      description: The updated entry.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/Restaurant
+    '400':
+      description: Validation failed; every problem is listed.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/RestaurantValidationErrors
+    '404':
+      description: No such entry
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: An entry with the same name (or place_id) already exists in that city;
+        it is returned so the caller can update it instead.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - existing
+            properties:
+              error:
+                type: string
+              existing:
+                $ref: ../../../../openapi.yaml#/components/schemas/Restaurant
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+delete:
+  summary: Delete a restaurant
+  description: |
+    Hard-delete an entry. This is the only way an entry is removed — the AI has no
+    delete action.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: restaurant_id
+    in: path
+    required: true
+    description: Entry id.
+    schema:
+      type: string
+      example: 4c3e472ca348
+  responses:
+    '200':
+      description: Deleted; the removed entry is returned.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - status
+            - restaurant
+            properties:
+              status:
+                type: string
+                enum:
+                - deleted
+              restaurant:
+                $ref: ../../../../openapi.yaml#/components/schemas/Restaurant
+    '404':
+      description: No such entry
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

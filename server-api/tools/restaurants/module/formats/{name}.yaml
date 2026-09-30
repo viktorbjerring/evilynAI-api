@@ -1,0 +1,125 @@
+patch:
+  summary: Rename a format
+  description: |
+    Rename a value in place. Entries reference values by id, so every entry
+    follows the rename; nothing is migrated. Renaming onto another existing value
+    is a 409 — to merge two values, delete one with `replace_with`.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: name
+    in: path
+    required: true
+    description: The format value, matched case- and accent-insensitively.
+    schema:
+      type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+          - new_name
+          properties:
+            new_name:
+              type: string
+  responses:
+    '200':
+      description: The renamed value.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/RestaurantVocabValue
+    '400':
+      description: Validation failed; every problem is listed.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/RestaurantValidationErrors
+    '404':
+      description: No such value
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: The new name is taken
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+delete:
+  summary: Delete a format
+  description: |
+    Delete a value. Refused with 409 while any entry references it, unless
+    `replace_with` names another value: referencing entries are moved to it first
+    (in one transaction), then the value is removed.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: name
+    in: path
+    required: true
+    description: The format value, matched case- and accent-insensitively.
+    schema:
+      type: string
+  - name: replace_with
+    in: query
+    required: false
+    description: Value to move referencing entries to.
+    schema:
+      type: string
+  responses:
+    '200':
+      description: Deleted.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../openapi.yaml#/components/schemas/RestaurantVocabDeletion
+    '404':
+      description: No such value (or no such replacement)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: Still referenced, or replace_with names the same value
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,247 @@
+get:
+  summary: List restaurants
+  description: |
+    List registry entries. All filters are optional and combine. Unlike the AI's
+    `lookup` action, omitting `city` means **every city**, not the current one.
+
+    Default order is score (best first, unscored last), or newest first when
+    `status=wishlist`. Any price filter excludes unpriced entries. `total` is the
+    uncapped match count; `truncated` says whether this page is all of it.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  parameters:
+  - name: city
+    in: query
+    required: false
+    description: City name or alias. Omit for every city.
+    schema:
+      type: string
+  - name: status
+    in: query
+    required: false
+    description: Only this status.
+    schema:
+      type: string
+      enum:
+      - visited
+      - wishlist
+  - name: cuisine
+    in: query
+    required: false
+    description: Comma-separated cuisines; matches entries with any of them.
+    schema:
+      type: string
+  - name: format
+    in: query
+    required: false
+    description: One format value.
+    schema:
+      type: string
+  - name: min_score
+    in: query
+    required: false
+    description: Lowest score included (so wishlist entries drop out).
+    schema:
+      type: number
+  - name: max_price
+    in: query
+    required: false
+    description: Highest price, DKK per person.
+    schema:
+      type: integer
+  - name: price_tier
+    in: query
+    required: false
+    description: Exact price tier (see `GET config`).
+    schema:
+      type: integer
+  - name: q
+    in: query
+    required: false
+    description: Full-text search over name and description; every word must match (prefix).
+    schema:
+      type: string
+  - name: sort
+    in: query
+    required: false
+    description: Ordering.
+    schema:
+      type: string
+      enum:
+      - score
+      - recent
+      - price
+      - name
+  - name: limit
+    in: query
+    required: false
+    description: Page size; capped at the configured maximum.
+    schema:
+      type: integer
+  - name: offset
+    in: query
+    required: false
+    description: Page offset.
+    schema:
+      type: integer
+  responses:
+    '200':
+      description: A page of matches.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - city
+            - all_cities
+            - sort
+            - total
+            - count
+            - offset
+            - truncated
+            - results
+            properties:
+              city:
+                type: string
+                nullable: true
+                description: Canonical city filtered on; null when searching every city.
+              all_cities:
+                type: boolean
+              sort:
+                type: string
+                enum:
+                - score
+                - recent
+                - price
+                - name
+              total:
+                type: integer
+              count:
+                type: integer
+              offset:
+                type: integer
+              truncated:
+                type: boolean
+              results:
+                type: array
+                items:
+                  $ref: ../../../openapi.yaml#/components/schemas/Restaurant
+    '400':
+      description: Validation failed; every problem is listed.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../openapi.yaml#/components/schemas/RestaurantValidationErrors
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+post:
+  summary: Add a restaurant
+  description: |
+    Create an entry. A wishlist entry needs only `name` and `status`; a visited one
+    also needs `score`. `city` defaults to the current city and is refused when
+    neither is available. `price_tier`, `country`, `id` and the timestamps are
+    derived and cannot be written — an unknown field is a 400.
+
+    An entry whose normalised name matches one already in the same city (or, with
+    a `place_id`, whose place id matches) is refused with 409 and the existing
+    entry, so the caller updates instead of duplicating.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+          - name
+          - status
+          properties:
+            name:
+              type: string
+            status:
+              type: string
+              enum:
+              - visited
+              - wishlist
+            score:
+              type: number
+              nullable: true
+              description: 1.0–10.0; rounded half-up to one decimal. Required for visited,
+                forbidden for wishlist.
+            price:
+              type: integer
+              nullable: true
+              description: DKK per person, positive.
+            cuisine:
+              type: array
+              items:
+                type: string
+              description: Values from the cuisine vocabulary (matched case-/accent-insensitively,
+                stored canonically).
+            format:
+              type: string
+              nullable: true
+              description: One value from the format vocabulary.
+            description:
+              type: string
+            city:
+              type: string
+              description: City name or alias.
+            address:
+              type: string
+              nullable: true
+              description: Reserved; not used yet.
+            place_id:
+              type: string
+              nullable: true
+              description: Reserved; not used yet. When set, it (not the name) is the duplicate
+                key.
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../openapi.yaml#/components/schemas/Restaurant
+    '400':
+      description: Validation failed; every problem is listed.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../openapi.yaml#/components/schemas/RestaurantValidationErrors
+    '409':
+      description: An entry with the same name (or place_id) already exists in that city;
+        it is returned so the caller can update it instead.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - existing
+            properties:
+              error:
+                type: string
+              existing:
+                $ref: ../../../openapi.yaml#/components/schemas/Restaurant
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

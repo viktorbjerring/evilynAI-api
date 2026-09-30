@@ -1,0 +1,73 @@
+get:
+  summary: Read the price tiers
+  description: |
+    The configured price-tier thresholds (DKK per person) and the tiers they
+    produce. A tier is derived from an entry's price on every read, so changing the
+    thresholds in the tool config re-tiers everything with no migration.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  responses:
+    '200':
+      description: Price configuration.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - price_tier_thresholds
+            - price_tiers
+            - currency
+            - price_basis
+            - lookup_default_limit
+            - lookup_max_limit
+            properties:
+              price_tier_thresholds:
+                type: array
+                items:
+                  type: integer
+                example:
+                - 150
+                - 300
+                - 500
+              price_tiers:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - tier
+                  - min_price
+                  - max_price_exclusive
+                  - label
+                  properties:
+                    tier:
+                      type: integer
+                    min_price:
+                      type: integer
+                      nullable: true
+                    max_price_exclusive:
+                      type: integer
+                      nullable: true
+                    label:
+                      type: string
+                      example: 150–299 DKK
+              currency:
+                type: string
+                example: DKK
+              price_basis:
+                type: string
+                example: per person
+              lookup_default_limit:
+                type: integer
+              lookup_max_limit:
+                type: integer
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

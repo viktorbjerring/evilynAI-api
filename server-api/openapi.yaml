@@ -948,6 +948,147 @@ components:
             A `record_id`: the track is visibly two animals and should be cut
             after that record.
 
+    Restaurant:
+      type: object
+      description: >-
+        One restaurant registry entry. `city` and `country` come from the city
+        table; `price_tier` is derived from `price` against the configured
+        thresholds and is never stored or writable.
+      required: [id, name, status, score, price, price_tier, cuisine, format,
+                 description, city, country, address, place_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          example: 4c3e472ca348
+        name:
+          type: string
+          example: Ramen to Biiru
+        status:
+          type: string
+          enum: [visited, wishlist]
+        score:
+          type: number
+          nullable: true
+          description: 1.0–10.0, one decimal. Set exactly when `status` is `visited`.
+          example: 8.3
+        price:
+          type: integer
+          nullable: true
+          description: DKK per person.
+          example: 180
+        price_tier:
+          type: integer
+          nullable: true
+          description: Derived from `price`; null when unpriced.
+          example: 2
+        cuisine:
+          type: array
+          items:
+            type: string
+          description: Canonical values from the cuisine vocabulary.
+          example: [ramen, japanese]
+        format:
+          type: string
+          nullable: true
+          description: Canonical value from the format vocabulary.
+          example: sit-down
+        description:
+          type: string
+        city:
+          type: string
+          example: Aarhus
+        country:
+          type: string
+          example: Denmark
+        address:
+          type: string
+          nullable: true
+          description: Reserved; not used yet.
+        place_id:
+          type: string
+          nullable: true
+          description: Reserved; not used yet.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RestaurantCity:
+      type: object
+      required: [name, country, aliases, restaurant_count]
+      properties:
+        name:
+          type: string
+          example: Aarhus
+        country:
+          type: string
+          example: Denmark
+        aliases:
+          type: array
+          items:
+            type: string
+          example: [Århus]
+        restaurant_count:
+          type: integer
+
+    RestaurantVocabValue:
+      type: object
+      required: [name, restaurant_count]
+      properties:
+        name:
+          type: string
+          example: ramen
+        restaurant_count:
+          type: integer
+          description: How many entries reference the value.
+
+    RestaurantValidationErrors:
+      type: object
+      description: >-
+        Every problem with the request, at once. `valid` lists the accepted
+        values for each vocabulary a field was refused against.
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+          example: ["Unknown cuisine 'peruvian'", "a wishlist restaurant cannot have a score"]
+        valid:
+          type: object
+          properties:
+            cuisine:
+              type: array
+              items:
+                type: string
+            format:
+              type: array
+              items:
+                type: string
+            city:
+              type: array
+              items:
+                type: string
+
+    RestaurantVocabDeletion:
+      type: object
+      required: [status, deleted, migrated, replaced_with]
+      properties:
+        status:
+          type: string
+          enum: [deleted]
+        deleted:
+          type: string
+          description: Canonical name of the removed value.
+        migrated:
+          type: integer
+          description: Entries moved to `replaced_with` first.
+        replaced_with:
+          type: string
+          nullable: true
+
   responses:
     Unauthorized:
       description: Missing or invalid JWT token

@@ -1,0 +1,86 @@
+get:
+  summary: Read the current city
+  description: |
+    The current city: the default for adds and lookups when no city is given. It
+    is stamped onto each entry at write time, so changing it never rewrites
+    existing entries. Null until set. A hand-edited `state.json` naming a city the
+    table does not know reads as null.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  responses:
+    '200':
+      description: The current city.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - current_city
+            properties:
+              current_city:
+                allOf:
+                - $ref: ../../../openapi.yaml#/components/schemas/RestaurantCity
+                nullable: true
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+put:
+  summary: Set the current city
+  description: |
+    Set the current city directly (the AI's `set_location` action needs the user's
+    approval; this route is that approval's operator-side equivalent). Aliases
+    resolve. `null` clears it.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+          - current_city
+          properties:
+            current_city:
+              type: string
+              nullable: true
+              example: Aarhus
+  responses:
+    '200':
+      description: The new current city.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - current_city
+            properties:
+              current_city:
+                allOf:
+                - $ref: ../../../openapi.yaml#/components/schemas/RestaurantCity
+                nullable: true
+    '400':
+      description: Validation failed; every problem is listed.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../openapi.yaml#/components/schemas/RestaurantValidationErrors
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,84 @@
+get:
+  summary: List formats
+  description: |
+    Every format value with how many entries reference it. The AI's tool schema
+    offers exactly these values as an enum, rebuilt on every run — a value added
+    here is offered on her next turn.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  responses:
+    '200':
+      description: The format vocabulary, sorted.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - formats
+            properties:
+              formats:
+                type: array
+                items:
+                  $ref: ../../../openapi.yaml#/components/schemas/RestaurantVocabValue
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+post:
+  summary: Add a format
+  description: |
+    Add a format value. Refused with 409 when it matches an existing value
+    case-, accent- and punctuation-insensitively (`Cafe` matches `café`).
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+          - name
+          properties:
+            name:
+              type: string
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../openapi.yaml#/components/schemas/RestaurantVocabValue
+    '400':
+      description: Validation failed; every problem is listed.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../openapi.yaml#/components/schemas/RestaurantValidationErrors
+    '409':
+      description: Already exists
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

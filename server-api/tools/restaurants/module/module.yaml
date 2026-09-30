@@ -1,0 +1,67 @@
+get:
+  summary: Restaurants module status
+  description: |
+    Registry summary: the current city (null until one is set — adds and lookups
+    without an explicit city are refused until then), entry counts per status, the
+    size of each controlled vocabulary, the price-tier thresholds and the store's
+    schema version.
+  tags:
+  - module-admin
+  security:
+  - bearerAuth: []
+  responses:
+    '200':
+      description: Module status.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - name
+            - details
+            properties:
+              name:
+                type: string
+                example: restaurants
+              details:
+                type: object
+                properties:
+                  current_city:
+                    allOf:
+                    - $ref: ../../../openapi.yaml#/components/schemas/RestaurantCity
+                    nullable: true
+                  restaurants:
+                    type: integer
+                  by_status:
+                    type: object
+                    properties:
+                      visited:
+                        type: integer
+                      wishlist:
+                        type: integer
+                  cuisines:
+                    type: integer
+                  formats:
+                    type: integer
+                  cities:
+                    type: integer
+                  price_tier_thresholds:
+                    type: array
+                    items:
+                      type: integer
+                    example:
+                    - 150
+                    - 300
+                    - 500
+                  schema_version:
+                    type: integer
+                    example: 1
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

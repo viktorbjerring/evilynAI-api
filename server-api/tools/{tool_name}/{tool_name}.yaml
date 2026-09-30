@@ -70,7 +70,12 @@ get:
                     parameters:
                       type: object
                       additionalProperties: true
-                      description: JSON Schema for the action's parameters
+                      description: >-
+                        JSON Schema for the action's parameters, exactly as the
+                        AI is shown it. A tool may make part of it live — an
+                        `enum` drawn from a table an operator edits (the
+                        restaurants tool's cuisines and formats) — so it can
+                        change between reads without a reload.
                     permission:
                       type: string
                       enum: [immediate, requires_approval, disabled, system_only]

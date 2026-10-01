@@ -3,12 +3,13 @@ get:
   description: |
     Connection state and configuration of the birds module.
 
-    The module reads two deliberately separate sources — the filmstrip
-    labelling backlog (work waiting for a human) and the detector's own hourly
-    sighting counts (a model's guesses). Each is bound independently by the app
-    layer, so one may be connected while the other is not; `backlog_connected`
-    and `sightings_connected` report them separately rather than as a single
-    flag.
+    The module reads deliberately separate sources — the filmstrip labelling
+    backlog (work waiting for a human), the detector's own hourly sighting
+    counts (a model's guesses), and the detector's nightly model report (which
+    classifier versions exist, which runs, and how accurate each has been).
+    Each is bound independently by the app layer, so one may be connected while
+    another is not; `backlog_connected`, `sightings_connected` and
+    `models_connected` report them separately rather than as a single flag.
 
     `nudge` describes the daily backlog check and its current state. It
     measures reviewer attention — how long the oldest undecided track has been
@@ -54,6 +55,26 @@ get:
                     type: number
                     description: A `status.json` older than this is stale.
                     example: 36
+                  models_connected:
+                    type: boolean
+                    description: |
+                      Whether the model report store is bound (the `models`
+                      action). Bound does not mean a report has arrived — that
+                      is `reported: false` on the action.
+                  models_stale_hours:
+                    type: number
+                    description: |
+                      A last model report older than this means the detector
+                      has stopped reporting models.
+                    example: 48
+                  models_passes:
+                    type: integer
+                    description: How many recent labelling passes the `models` action shows.
+                    example: 7
+                  models_shadow_days:
+                    type: integer
+                    description: How many complete UTC days of shadow activity it shows.
+                    example: 7
                   timezone:
                     type: string
                     description: IANA zone the module presents times in.

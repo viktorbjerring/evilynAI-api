@@ -17,11 +17,15 @@ get:
     caps at 300 and refills on every pass — it is not the backlog. `producer`
     is a summary of the producer's `status.json` (filmstrip contract §10): the
     true backlog, how long the oldest track has waited, per-class labelling
-    coverage, aggregate counts of what the model thinks is waiting, and the
-    last labelling pass's score. Figures the producer did not send are left
-    out, never shown as zero. `probable_waiting` is per species and nothing
-    finer: no model opinion about a specific track is exposed anywhere
-    (contract §5a).
+    coverage and aggregate counts of what the model thinks is waiting. Figures
+    the producer did not send are left out, never shown as zero.
+    `probable_waiting` is per species and nothing finer: no model opinion about
+    a specific track is exposed anywhere (contract §5a).
+
+    **Model accuracy is not here.** A `last_pass` in `status.json` is ignored
+    (the producer is removing it); versions, deployment and the accuracy
+    history arrive in the model report (`POST /birds/models`) and are read
+    through the `birds` tool's `models` action. `model_accuracy` says so.
   tags: [tools]
   security:
     - bearerAuth: []
@@ -63,6 +67,11 @@ get:
                       `oldest_shipped_utc`.
                   oldest_pending_arrived_local: {type: string, nullable: true}
                   timezone: {type: string, example: Europe/Copenhagen}
+                  model_accuracy:
+                    type: string
+                    description: |
+                      A pointer, not data: model versions and accuracy are
+                      read through the `birds` tool's `models` action.
                   undelivered_verdicts:
                     type: object
                     properties:
@@ -136,21 +145,6 @@ get:
                           counts_are_a_floor:
                             type: boolean
                             description: Present (true) when fewer tracks were predicted than are undecided.
-                      last_pass:
-                        type: object
-                        properties:
-                          model: {type: string}
-                          labels_through_local: {type: string}
-                          scored: {type: integer}
-                          agreement: {type: number}
-                          by_confidence:
-                            type: object
-                            description: '"min-max" band → `{scored, agreement}`.'
-                            additionalProperties: {type: object}
-                          per_class:
-                            type: object
-                            description: Species → `{support, precision, recall}`.
-                            additionalProperties: {type: object}
               nudge:
                 type: object
                 description: Same shape as `details.nudge` on the module root.

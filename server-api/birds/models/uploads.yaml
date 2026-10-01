@@ -1,0 +1,57 @@
+get:
+  summary: Recent model report uploads
+  description: |
+    Envelope metadata for recent `POST /birds/models` posts — when the
+    detector last sent a model report and how many entries of each block it
+    carried — for diagnosing "why doesn't Evilyn know about the model?"
+    without asking her.
+
+    Metadata only, deliberately. The report's contents (accuracy figures and
+    shadow-mode species calls) are the model's opinion and are read through
+    the `birds` tool's `models` action, never from a route a labelling client
+    could reach (filmstrip contract §5a).
+  tags: [birds]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 200, default: 20}
+  responses:
+    '200':
+      description: Recent upload envelopes, newest first.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [uploads, last_upload_utc]
+            properties:
+              uploads:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    upload_id: {type: integer}
+                    received_utc:
+                      type: string
+                      description: When the server stored it. Staleness is judged from this.
+                    producer: {type: string}
+                    generated_utc: {type: string, nullable: true}
+                    camera_id: {type: string, nullable: true}
+                    versions_written: {type: integer}
+                    benchmarks_written: {type: integer}
+                    passes_written: {type: integer}
+                    gate_written: {type: integer}
+                    shadow_days_written: {type: integer}
+                    entries_replaced:
+                      type: integer
+                      description: Entries across all blocks whose key already existed.
+              last_upload_utc:
+                type: string
+                nullable: true
+                description: '`received_utc` of the newest upload, or null if none has arrived.'
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: Model reports are not configured on this server.

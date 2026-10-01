@@ -1,0 +1,393 @@
+post:
+  summary: Upload the detector's model report
+  description: |
+    The yard detector's nightly report on its species classifier: which model
+    versions exist, which one runs on the device and in what mode, and how
+    each has scored against the reviewer's labels, as a history. Posted by the
+    Jetson once a night, after the filmstrip sync. The producer's spec is
+    `doc/model-report-contract.md`.
+
+    **Same credential as `POST /birds/reports`.** The detector presents
+    `X-Corvus-Key` (`BIRD_INGEST_KEY`), not the bearer token; the route answers
+    **503** when the key is unset and **401** when it does not match.
+
+    **Every post re-sends everything the producer knows**, and every block is
+    an upsert by its own key — whole-entry replacement, last write wins, one
+    transaction per post:
+
+    | block | key |
+    |---|---|
+    | `versions` | `model_version` |
+    | `benchmarks` | `benchmark_id` (the exam and its per-version results are replaced together) |
+    | `passes` | `pass_id` |
+    | `gate` | (`model_version`, `benchmark_id`) |
+    | `shadow_days` | (`camera_id`, `day`, `model_version`) — `camera_id` falls back to the report's |
+
+    So a re-send is idempotent and a missed night costs nothing. **Every block
+    is optional and may be empty; an absent or empty block deletes nothing.**
+    History is kept.
+
+    One post must not name the same key twice within a block — that is
+    refused rather than resolved, since "last write wins" inside a single
+    transaction would silently pick one.
+
+    Only the fields the contract names are stored; unknown fields are dropped.
+    A known field of the wrong type is an error. Instants must carry a UTC
+    offset and are stored as `YYYY-MM-DDTHH:MM:SSZ`; days are `YYYY-MM-DD`;
+    accuracies, agreements, precision and recall are fractions in `[0, 1]` or
+    `null`; counts are non-negative integers.
+
+    Species names outside the published `vocabulary.json` are **stored and
+    flagged** in `unknown_species`, never rejected, as with sightings.
+
+    `GET /birds/models/uploads` lists the upload envelopes (metadata only).
+
+    **None of this is a label, and none of it is a sighting.** Accuracy
+    describes the model against the reviewer; shadow calls are the model's
+    opinion. Evilyn reads it through the `birds` tool's `models` action, never
+    through a labelling route, and nothing here may pre-select anything in the
+    labelling UI (filmstrip contract §5a).
+
+    Caps per report: `versions` 500, `benchmarks` 1000, `passes` 5000, `gate`
+    5000, `shadow_days` 2000; inside one entry, at most 500 results, species,
+    classes or bands. They bound a malformed post, not a real one (the whole
+    history is a few hundred rows a year).
+  tags: [birds]
+  security:
+    - corvusKey: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            schema:
+              type: integer
+              default: 1
+              description: Wire schema version. Anything other than 1 is refused.
+            producer:
+              type: string
+              description: Free-form producer identifier, recorded per upload.
+              example: corvus/7b1703b
+            generated_utc:
+              type: string
+              nullable: true
+              description: When the producer built this report.
+            camera_id:
+              type: string
+              nullable: true
+              description: Default camera for `shadow_days` entries that do not name one.
+            versions:
+              type: array
+              maxItems: 500
+              items:
+                type: object
+                required: [model_version]
+                properties:
+                  model_version: {type: string, example: cls_baseline_v3}
+                  role: {type: string, nullable: true, example: classifier}
+                  trained_utc: {type: string, nullable: true}
+                  dataset_version: {type: string, nullable: true}
+                  labels_through_utc:
+                    type: string
+                    nullable: true
+                    description: Newest label the model trained on; null for older runs.
+                  class_set:
+                    type: object
+                    nullable: true
+                    properties:
+                      id: {type: string}
+                      version: {type: integer}
+                  trained_classes:
+                    type: array
+                    items: {type: string}
+                    description: The classes the head actually learned.
+                  deployment:
+                    type: object
+                    nullable: true
+                    required: [state]
+                    properties:
+                      state:
+                        type: string
+                        enum: [live, shadow, not_deployed, retired]
+                        description: |
+                          `live` — its species calls are used; `shadow` — it
+                          runs on the device and its calls are recorded but
+                          nothing acts on them; `not_deployed`; `retired` — it
+                          ran once and was replaced.
+                      since_utc: {type: string, nullable: true}
+                      precision: {type: string, nullable: true, example: fp16}
+                      golden_check:
+                        type: object
+                        nullable: true
+                        properties:
+                          passed: {type: boolean}
+                          checked_at_utc: {type: string}
+                          samples: {type: integer}
+                          argmax_mismatches: {type: integer}
+                          max_confidence_delta: {type: number}
+            benchmarks:
+              type: array
+              maxItems: 1000
+              description: |
+                One exam per entry. Two benchmarks are different exams and must
+                not be compared number for number; within one, every version is.
+              items:
+                type: object
+                required: [benchmark_id]
+                properties:
+                  benchmark_id: {type: string, example: '2026-09-29'}
+                  generated_utc: {type: string, nullable: true}
+                  exam:
+                    type: object
+                    nullable: true
+                    properties:
+                      cutoff_utc: {type: string, nullable: true}
+                      fresh_labels: {type: integer}
+                      sharing_a_day_with_training: {type: integer}
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [model_version]
+                      properties:
+                        model_version: {type: string}
+                        all:
+                          type: object
+                          nullable: true
+                          properties:
+                            n: {type: integer}
+                            accuracy: {type: number, nullable: true, description: Recall.}
+                        tier1:
+                          type: object
+                          nullable: true
+                          properties:
+                            n: {type: integer}
+                            accuracy: {type: number, nullable: true, description: Recall.}
+                        tier2:
+                          type: object
+                          nullable: true
+                          properties:
+                            n: {type: integer}
+                            accuracy: {type: number, nullable: true, description: Recall.}
+                        species:
+                          type: object
+                          description: Per-species recall, keyed by species.
+                          additionalProperties:
+                            type: object
+                            properties:
+                              n: {type: integer}
+                              accuracy: {type: number, nullable: true}
+            passes:
+              type: array
+              maxItems: 5000
+              items:
+                type: object
+                required: [pass_id]
+                properties:
+                  pass_id: {type: string}
+                  labels_on_utc_day: {type: string, format: date, nullable: true}
+                  model_version:
+                    type: string
+                    nullable: true
+                    description: The model that made most of the scored predictions.
+                  models:
+                    type: object
+                    nullable: true
+                    additionalProperties: {type: integer}
+                    description: '`{version: count}` when the pass spans two models.'
+                  scored: {type: integer}
+                  agreement: {type: number, nullable: true}
+                  bands:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        min: {type: number}
+                        max: {type: number}
+                        scored: {type: integer}
+                        agreement: {type: number, nullable: true}
+                  per_class:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        support: {type: integer}
+                        precision: {type: number, nullable: true}
+                        recall: {type: number, nullable: true}
+            gate:
+              type: array
+              maxItems: 5000
+              items:
+                type: object
+                required: [model_version, benchmark_id]
+                properties:
+                  model_version: {type: string}
+                  benchmark_id: {type: string}
+                  min_long_axis_px: {type: number, example: 150}
+                  threshold: {type: number, example: 0.9}
+                  species:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      required: [status]
+                      properties:
+                        status:
+                          type: string
+                          enum: [met, not_met, not_scoreable]
+                          description: |
+                            `not_scoreable` (with a `reason`) means too few
+                            labelled days or crops to score — not a failure.
+                        reason: {type: string, nullable: true}
+                        support: {type: integer}
+                        precision: {type: number, nullable: true}
+                        recall: {type: number, nullable: true}
+            shadow_days:
+              type: array
+              maxItems: 2000
+              items:
+                type: object
+                required: [day, model_version]
+                properties:
+                  day: {type: string, format: date}
+                  camera_id: {type: string}
+                  model_version: {type: string}
+                  records: {type: integer}
+                  classified: {type: integer}
+                  not_classified: {type: integer}
+                  calls:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        all: {type: integer}
+                        confident: {type: integer}
+                  uncertain:
+                    type: object
+                    additionalProperties: {type: integer}
+        example:
+          schema: 1
+          producer: corvus/7b1703b
+          generated_utc: '2026-10-01T00:50:12.000Z'
+          camera_id: cam0
+          versions:
+            - model_version: cls_baseline_v3
+              role: classifier
+              trained_utc: '2026-09-21T20:01:36Z'
+              dataset_version: 'sha256:28b1fd42f9000bc7'
+              labels_through_utc: null
+              class_set: {id: classifier, version: 3}
+              trained_classes: [corvus_cornix, corvus_frugilegus]
+              deployment:
+                state: shadow
+                since_utc: '2026-09-26T14:56:34Z'
+                precision: fp16
+                golden_check: {passed: true, checked_at_utc: '2026-09-26T14:55:57Z',
+                               samples: 18, argmax_mismatches: 0,
+                               max_confidence_delta: 0.001281}
+          benchmarks:
+            - benchmark_id: '2026-09-29'
+              generated_utc: '2026-09-29T00:02:10Z'
+              exam: {cutoff_utc: '2026-09-21T20:01:36Z', fresh_labels: 392,
+                     sharing_a_day_with_training: 332}
+              results:
+                - model_version: cls_baseline_v3
+                  all: {n: 392, accuracy: 0.90}
+                  tier1: {n: 280, accuracy: 0.95}
+                  tier2: {n: 101, accuracy: 0.81}
+                  species: {corvus_monedula: {n: 190, accuracy: 0.95}}
+          passes:
+            - pass_id: '2026-09-29'
+              labels_on_utc_day: '2026-09-29'
+              model_version: cls_baseline_v3
+              scored: 276
+              agreement: 0.837
+              bands: [{min: 0.9, max: 1.0, scored: 230, agreement: 0.93}]
+              per_class: {corvus_monedula: {support: 120, precision: 0.94, recall: 0.95}}
+          gate:
+            - model_version: cls_baseline_v3
+              benchmark_id: '2026-09-29'
+              min_long_axis_px: 150
+              threshold: 0.90
+              species:
+                corvus_monedula: {status: met, support: 31, precision: 0.94, recall: 0.97}
+                corvus_cornix: {status: not_scoreable, reason: 1 labelled day of 3 needed}
+          shadow_days:
+            - day: '2026-09-29'
+              camera_id: cam0
+              model_version: cls_baseline_v3
+              records: 5230
+              classified: 5198
+              not_classified: 32
+              calls: {corvus_monedula: {all: 4410, confident: 3980}}
+              uncertain: {low_resolution: 610, below_threshold: 48, ambiguous_top2: 12}
+  responses:
+    '200':
+      description: Stored.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, received_utc, written, replaced, unknown_species]
+            properties:
+              status: {type: string, example: recorded}
+              received_utc:
+                type: string
+                description: When the server stored it; what staleness is judged from.
+              written:
+                type: object
+                description: Entries accepted per block. An absent block counts 0.
+                properties:
+                  versions: {type: integer}
+                  benchmarks: {type: integer}
+                  passes: {type: integer}
+                  gate: {type: integer}
+                  shadow_days: {type: integer}
+              replaced:
+                type: object
+                description: How many of those keys already existed and were overwritten.
+                properties:
+                  versions: {type: integer}
+                  benchmarks: {type: integer}
+                  passes: {type: integer}
+                  gate: {type: integer}
+                  shadow_days: {type: integer}
+              unknown_species:
+                type: array
+                items: {type: string}
+                description: |
+                  Species names in the report that the published vocabulary
+                  does not list. Stored anyway; empty when no vocabulary is
+                  published.
+          example:
+            status: recorded
+            received_utc: '2026-10-01T00:50:14Z'
+            written: {versions: 3, benchmarks: 1, passes: 12, gate: 3, shadow_days: 30}
+            replaced: {versions: 3, benchmarks: 1, passes: 11, gate: 3, shadow_days: 29}
+            unknown_species: []
+    '400':
+      description: |
+        Validation failed. Every problem is reported at once, each naming its
+        entry by block and index.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items: {type: string}
+            example:
+              errors:
+                - "'schema' must be 1"
+                - "versions[1].deployment.state: must be one of live, shadow, not_deployed, retired (got 'sleeping')"
+                - "passes[0].agreement must be between 0 and 1 (got 1.7)"
+    '401':
+      description: Missing or incorrect ingest key.
+    '500':
+      description: The report could not be stored.
+    '503':
+      description: |
+        Not configured on this server — `BIRD_INGEST_KEY` unset, or no model
+        report store.

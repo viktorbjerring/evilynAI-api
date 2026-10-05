@@ -1,0 +1,48 @@
+delete:
+  summary: Reset a task's nag state (tasks module)
+  description: |
+    Module admin route on the `tasks` module. Drops the task's nag state — nag
+    count, last nag and snooze — and lets reconciliation start it afresh. A task
+    already past due re-enters the cycle with its first nag `nag_delay_minutes`
+    from now; one not yet due gets its initial reminder as usual.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Nag state reset
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, task_id]
+            properties:
+              status:
+                type: string
+                enum: [reset]
+              task_id:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: The task has no nag state
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,145 @@
+post:
+  summary: Delete old completed tasks (tasks module)
+  description: |
+    Module admin route on the `tasks` module. Permanently deletes, in Google
+    Tasks, every task **completed** more than `older_than_days` ago, judged by
+    Google's `completed` timestamp. Open tasks are never touched, and a
+    completed task without a timestamp is left alone (there is no age to judge).
+
+    It works against Google itself, never the local mirror — deleting on the
+    strength of a stale copy could remove a task reopened since — so it refuses
+    while offline (`503`) or while a sync is running (`409`). Deleted tasks are
+    dropped from the local mirror too.
+
+    The same operation is offered to the server scheduler as the
+    `tasks.cleanup` job; adding it as a step after `tasks.sync` in the nightly
+    schedule is what makes the retention automatic.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            older_than_days:
+              type: number
+              description: |
+                Positive. Defaults to the tool's `delete_completed_after_days`
+                config; with neither, the request is refused (`400`).
+            dry_run:
+              type: boolean
+              default: false
+              description: List what would be deleted without deleting.
+  responses:
+    '200':
+      description: Cleanup ran (or, with `dry_run`, what it would delete)
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, dry_run, older_than_days, cutoff, matched, deleted, tasks, failed]
+            properties:
+              status:
+                type: string
+                enum: [ok, partial]
+                description: '`partial` when some deletes failed; see `failed`.'
+              dry_run:
+                type: boolean
+              older_than_days:
+                type: number
+              cutoff:
+                type: string
+                format: date-time
+                description: Tasks completed before this instant (UTC) qualify.
+              matched:
+                type: integer
+              deleted:
+                type: integer
+              tasks:
+                type: array
+                description: Deleted tasks — or, with `dry_run`, the ones that would be.
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    task_list_id:
+                      type: string
+                    list_title:
+                      type: string
+                      nullable: true
+                    completed:
+                      type: string
+                      format: date-time
+              failed:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    task_list_id:
+                      type: string
+                    list_title:
+                      type: string
+                      nullable: true
+                    completed:
+                      type: string
+                      format: date-time
+                    error:
+                      type: string
+    '400':
+      description: |
+        `older_than_days` is not a positive number, or none was given and
+        `delete_completed_after_days` is not configured (`status: disabled`).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              reason:
+                type: string
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '409':
+      description: A sync is running
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [busy]
+              reason:
+                type: string
+    '503':
+      description: Google Tasks is unreachable
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [offline]
+              reason:
+                type: string

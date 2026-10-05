@@ -43,6 +43,22 @@ get:
                       type: string
                     due:
                       type: string
+                      description: As Google stores it — the date, at midnight UTC.
+                    due_at:
+                      type: string
+                      description: |
+                        Effective due instant in local time (ISO 8601 with
+                        offset): the due date at the time kept for the task, or
+                        at the default reminder time. Present when `due` is.
+                    due_time_default:
+                      type: boolean
+                      description: True when no time was given and the default stands in.
+                    nag_count:
+                      type: integer
+                      description: How many nags have covered the task. Omitted when zero.
+                    snoozed_until:
+                      type: string
+                      description: Local time reminders resume. Omitted unless snoozed.
                     status:
                       type: string
                       enum: [needsAction, completed]
@@ -88,7 +104,11 @@ post:
               type: string
             due:
               type: string
-              description: RFC 3339 date-time; the date portion is used.
+              description: |
+                RFC 3339 date or date-time. Google stores the (local) date only;
+                a time is kept by the module and is when the task's reminder
+                fires. A date alone, or a time of exactly midnight, uses the
+                default reminder time. Without an offset it is local time.
             task_list_id:
               type: string
               default: "@default"

@@ -1,0 +1,85 @@
+post:
+  summary: Snooze a task's reminders (tasks module)
+  description: |
+    Module admin route on the `tasks` module; the same operation as Evilyn's
+    `tasks-snooze_task` action. No reminder or nag about the task is pushed
+    before `until`. The nag count is kept, so the ladder resumes where it was.
+    The due date is not changed.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [until]
+          properties:
+            until:
+              type: string
+              format: date-time
+              description: |
+                RFC 3339; in the future and at most 7 days ahead. Without an
+                offset it is read as local time in the module's timezone.
+            task_list_id:
+              type: string
+              default: "@default"
+  responses:
+    '200':
+      description: Task snoozed
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, task_id, snoozed_until]
+            properties:
+              status:
+                type: string
+                enum: [snoozed]
+              task_id:
+                type: string
+              title:
+                type: string
+              snoozed_until:
+                type: string
+                description: Local time, ISO 8601 with offset.
+              next_nag_at:
+                type: string
+                nullable: true
+                description: Local time of the task's next nag, if it is in the cycle.
+    '400':
+      description: |
+        `until` missing, unparseable, in the past or more than 7 days ahead; or
+        the task is completed or has no due date.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: No such task in the local store
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

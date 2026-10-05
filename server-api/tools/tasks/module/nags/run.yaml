@@ -1,0 +1,52 @@
+post:
+  summary: Run the nag check now (tasks module)
+  description: |
+    Module admin route on the `tasks` module, a testing aid. Syncs with Google,
+    then runs the same evaluation the scheduled check event runs: if at least
+    one task's own nag clock has come due (and it is not quiet hours), posts one
+    forced-notification message to Evilyn listing every overdue, unsnoozed task
+    and records it against each of them. `force` drops both gates — it still
+    needs an overdue task to list.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            force:
+              type: boolean
+              default: false
+  responses:
+    '200':
+      description: The outcome of the check
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status, task_ids, next_check_at]
+            properties:
+              status:
+                type: string
+                enum: [posted, nothing_due, quiet_hours]
+              task_ids:
+                type: array
+                description: The tasks the nag covered (empty unless posted).
+                items:
+                  type: string
+              next_check_at:
+                type: string
+                format: date-time
+                nullable: true
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

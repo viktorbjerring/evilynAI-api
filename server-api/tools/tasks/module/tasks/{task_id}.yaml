@@ -27,7 +27,9 @@ patch:
               type: string
             due:
               type: string
-              description: RFC 3339 date-time.
+              description: |
+                RFC 3339 date or date-time, read as on create. Changing it
+                restarts the task's reminders.
             completed:
               type: boolean
               nullable: true

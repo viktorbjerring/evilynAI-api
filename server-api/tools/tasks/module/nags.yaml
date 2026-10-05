@@ -1,0 +1,154 @@
+get:
+  summary: Reminder and nag state (tasks module)
+  description: |
+    Module admin route on the `tasks` module. Reports the reminder machinery:
+    every tracked task's nag state, the initial reminders currently armed,
+    when the next check runs, and the effective configuration.
+
+    A task with a due date gets one initial reminder (a push, no inference) at
+    its effective due instant — the Google due date at the time Evilyn kept for
+    it, else at `default_reminder_time`, in the module's timezone. If it is
+    still open `nag_delay_minutes` after the later of that instant and the
+    reminder, Evilyn is asked to chase it, on the `nag_ladder_minutes`
+    cadence, in one batched nag covering every overdue task. Nothing is pushed
+    inside `quiet_hours`.
+
+    All instants are UTC.
+  tags: [module-admin]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: Reminder and nag state
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [now, config, next_check_at, next_nag_at, reminders, tasks]
+            properties:
+              now:
+                type: string
+                format: date-time
+              config:
+                type: object
+                description: The effective reminder configuration, after validation.
+                properties:
+                  timezone:
+                    type: string
+                  default_reminder_time:
+                    type: string
+                    example: "09:00"
+                  nag_delay_minutes:
+                    type: integer
+                  nag_ladder_minutes:
+                    type: array
+                    items:
+                      type: integer
+                  quiet_hours:
+                    type: object
+                    nullable: true
+                    properties:
+                      start:
+                        type: string
+                      end:
+                        type: string
+                  reminder_horizon_hours:
+                    type: number
+                  max_tasks_per_nag:
+                    type: integer
+              next_check_at:
+                type: string
+                format: date-time
+                nullable: true
+                description: |
+                  When the single check event fires next: the next nag (moved out
+                  of quiet hours) or the moment the next unarmed reminder enters
+                  the arming horizon. Null when nothing is pending.
+              next_nag_at:
+                type: string
+                format: date-time
+                nullable: true
+                description: The earliest moment any task's own clock asks for a nag.
+              reminders:
+                type: array
+                description: Initial reminders currently armed.
+                items:
+                  type: object
+                  properties:
+                    event_id:
+                      type: string
+                    task_id:
+                      type: string
+                    title:
+                      type: string
+                    due_at:
+                      type: string
+                      format: date-time
+                    fire_at:
+                      type: string
+                      format: date-time
+                      description: Differs from due_at when quiet hours defer it.
+              tasks:
+                type: array
+                description: Nag state per open, dated task, earliest due first.
+                items:
+                  type: object
+                  properties:
+                    task_id:
+                      type: string
+                    task_list_id:
+                      type: string
+                    title:
+                      type: string
+                      nullable: true
+                    list_title:
+                      type: string
+                      nullable: true
+                    due_at:
+                      type: string
+                      format: date-time
+                      description: Effective due instant this state belongs to.
+                    due_time:
+                      type: string
+                      nullable: true
+                      description: The kept local time (HH:MM); null when the default applies.
+                    reminder:
+                      type: string
+                      enum: [pending, sent, skipped]
+                      description: |
+                        `skipped` covers a task already past due when first seen,
+                        a reminder that fired too late (host down), and one inside
+                        a snooze.
+                    reminder_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    reminder_event_id:
+                      type: string
+                      nullable: true
+                    nag_count:
+                      type: integer
+                    last_nag_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    next_nag_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    snoozed_until:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    overdue:
+                      type: boolean
+                      description: Whether the task is owed nagging now (snooze aside).
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

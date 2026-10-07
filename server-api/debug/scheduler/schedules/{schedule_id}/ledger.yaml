@@ -1,0 +1,55 @@
+get:
+  summary: A schedule's once-key ledger
+  description: |
+    The rendered `once_key`s this schedule's workflow nodes have already acted
+    on, newest first. A node whose key is listed here is recorded `deduped` and
+    calls nothing. Keys are written only after a successful call and pruned
+    after 90 days; deleting the schedule deletes its ledger.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: The ledger
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schedule_id, entries]
+            properties:
+              schedule_id:
+                type: string
+              entries:
+                type: array
+                items:
+                  type: object
+                  required: [key, run_id, recorded_at]
+                  properties:
+                    key:
+                      type: string
+                      example: "therapy-invoice:abc123"
+                    run_id:
+                      type: string
+                    recorded_at:
+                      type: string
+                      format: date-time
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No such schedule.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'

@@ -1,0 +1,53 @@
+delete:
+  summary: Forget one once-key
+  description: |
+    Removes one entry from the schedule's ledger, so the next run performs that
+    side effect again (e.g. re-creates a task deleted by mistake). The key is a
+    query parameter because a rendered key is free text and may contain `/`.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: key
+      in: query
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Forgotten
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [schedule_id, deleted]
+            properties:
+              schedule_id:
+                type: string
+              deleted:
+                type: string
+    '400':
+      description: '`key` missing.'
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No such schedule, or no such key in its ledger.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'

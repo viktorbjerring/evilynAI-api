@@ -92,6 +92,7 @@ components:
         - parameters
         - destructive
         - opens_url
+        - workflow
         - order
       properties:
         tool:
@@ -131,6 +132,13 @@ components:
           type: string
           description: Response field name holding the URL to open. Only present when `opens_url` is true.
           example: "authorization_url"
+        workflow:
+          type: boolean
+          description: >-
+            True when the action is opted in to server-scheduler workflows
+            (`@admin_action(workflow=True)`), so a schedule step may call it
+            unattended. Never true together with `opens_url`. See
+            `GET /debug/scheduler/actions`.
         group:
           type: string
           description: Optional section heading for grouping actions in a UI.
@@ -555,9 +563,34 @@ components:
         days: [Thu]
 
     ScheduleStep:
+      description: >-
+        One node of a schedule's `steps` tree — exactly one of `job`,
+        `action`, `for`, `if`. A plain `{job, params}` is a job node, so every
+        schedule written before workflows is valid and round-trips unchanged.
+        Templates (`{{ … }}`, sandboxed Jinja) may appear in `params` values,
+        `once_key`, a `for` source and an `if` condition; they read
+        `steps.<id>.result`, `run.now` / `run.today` / `run.schedule_id` /
+        `run.run_id`, and enclosing loop variables, with dates in the
+        toolset-wide timezone. A value that is exactly one `{{ … }}` keeps its
+        native type (list, number, object). At most 50 nodes in all, `for`/`if`
+        nested at most 4 deep.
+      oneOf:
+        - $ref: '#/components/schemas/ScheduleJobNode'
+        - $ref: '#/components/schemas/ScheduleActionNode'
+        - $ref: '#/components/schemas/ScheduleForNode'
+        - $ref: '#/components/schemas/ScheduleIfNode'
+
+    ScheduleJobNode:
       type: object
       required: [job]
+      additionalProperties: false
       properties:
+        id:
+          type: string
+          pattern: '^[a-z_][a-z0-9_]{0,39}$'
+          description: >-
+            Names the result for later nodes (`steps.<id>.result`). Unique in
+            the whole tree. A trigger job (`dream`, `reprocess`) has no result.
         job:
           type: string
           description: A job id from `GET /debug/scheduler/jobs`.
@@ -567,30 +600,145 @@ components:
           additionalProperties: true
           description: >-
             Stored exactly as given; declared defaults are applied at run
-            time. Validated against the job's parameters when saved.
+            time. Literal values are validated when saved, templated ones once
+            rendered.
+        once_key:
+          type: string
+          description: >-
+            Rendered at run time; if this schedule's ledger already holds it,
+            the node is `deduped` and nothing is called. Written only after a
+            successful call.
+
+    ScheduleActionNode:
+      type: object
+      required: [action]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z_][a-z0-9_]{0,39}$'
+        action:
+          type: string
+          description: >-
+            An admin-action manifest id opted in with `workflow: true` (see
+            `GET /debug/scheduler/actions`). Called in-process through the
+            real route; its JSON response body is the result.
+          example: "calendar.list_events_window"
+        params:
+          type: object
+          additionalProperties: true
+          description: Flat by name; routed to path, query or body from the manifest.
+        once_key:
+          type: string
+        allow_destructive:
+          type: boolean
+          default: false
+          description: Required (true) to call an action the manifest marks `destructive`.
+
+    ScheduleForNode:
+      type: object
+      required: [for, as, do]
+      additionalProperties: false
+      properties:
+        for:
+          type: string
+          description: >-
+            An expression (braces optional) evaluating to a list; `null` is an
+            empty list. At most 100 elements run; the rest are dropped with a
+            warning on the outcome.
+          example: "{{ steps.events.result.events }}"
+        as:
+          type: string
+          pattern: '^[a-z_][a-z0-9_]{0,39}$'
+          description: The loop variable. Not `steps`/`run`, not an enclosing loop's.
+        do:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ScheduleStep'
+
+    ScheduleIfNode:
+      type: object
+      required: [if, then]
+      additionalProperties: false
+      properties:
+        if:
+          type: string
+          description: An expression without braces, tested for truthiness.
+          example: "'therapy' in event.summary | lower"
+        then:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ScheduleStep'
+        else:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ScheduleStep'
 
     ScheduleStepOutcome:
       type: object
-      required: [job, status]
+      description: >-
+        What one node did. A plain job step records `job`, `status` and
+        `result`/`error` as before; workflow fields are added when set and
+        omitted otherwise.
+      required: [status]
       properties:
         job:
           type: string
+          description: The job id (job nodes only).
         status:
           type: string
-          enum: [ok, queued, error, unavailable]
+          enum: [ok, queued, error, unavailable, skipped, deduped, would_run, would_skip, would_dedupe]
           description: >-
             `queued` — a trigger job reached the bus (never `ok`: posting is
             all the scheduler knows; the dream's own outcome is at
-            `GET /debug/dream/status`). `error` — the job raised or its result
-            carried a non-`ok` status. `unavailable` — no such job is loaded
-            on the server right now.
+            `GET /debug/dream/status`). `error` — the call raised, returned
+            non-2xx, or its result carried a non-`ok` status; or a template
+            failed. `unavailable` — no such job / admin action is loaded.
+            `skipped` — the node reads a step that has no result (errored,
+            skipped, deduped, queued, or in an `if` branch not taken).
+            `deduped` — its `once_key` was already in the ledger. The `would_*`
+            values appear only in dry runs.
+        path:
+          type: string
+          description: Where the node is, with a loop's iteration in it.
+          example: "steps[1].iterations[0].do[0].then[0]"
+        kind:
+          type: string
+          enum: [job, action, for, if]
+        action:
+          type: string
+          description: The admin action id (action nodes only).
+        params:
+          description: The rendered params; replaced by a `{truncated, chars, preview}` object past 4,000 characters.
+        once_key:
+          type: string
+          description: The rendered once-key.
+        allow_destructive:
+          type: boolean
         result:
-          type: object
-          additionalProperties: true
-          description: "A direct job's own result dict (sync counts, or `{\"status\": \"offline\"}`)."
+          description: >-
+            A direct job's result dict, or an action's JSON response body
+            (non-JSON bodies as `{"text": …}`). Capped like `params`.
         error:
           type: string
-          description: The exception message when the job raised.
+        reason:
+          type: string
+          description: Why a node was skipped or deduped.
+        duration_ms:
+          type: integer
+        branch:
+          type: string
+          enum: [then, else, none]
+          description: The branch an `if` took.
+        iterations:
+          type: integer
+          description: How many elements a `for` ran.
+        warning:
+          type: string
+          description: E.g. a `for` that hit the 100-element cap.
 
     ScheduleRun:
       type: object
@@ -612,9 +760,11 @@ components:
           type: string
           enum: [running, ok, partial, error, skipped]
           description: >-
-            `ok` when every step was `ok`/`queued`, `error` when none was,
-            `partial` otherwise. Steps always run in order and a failed step
-            never stops the ones after it. `skipped` — nothing ran; `reason`
+            `ok` when every outcome was `ok`/`queued`/`deduped` (an `if` and a
+            `for` record an `ok` of their own), `error` when none was,
+            `partial` otherwise — `skipped` nodes included. Nodes always run in
+            order and a failed node never stops the ones after it; only the
+            200-call cap stops a run. `skipped` — nothing ran; `reason`
             says why (a previous run still in flight, or an occurrence missed
             while down with `catchup` off).
         started_at:
@@ -710,8 +860,10 @@ components:
           items:
             type: string
           description: >-
-            One entry per step whose job is not loaded right now. Such a step
-            is kept, not dropped, and reports `unavailable` when run.
+            One entry per node whose job or admin action is not loaded (or
+            whose action is no longer opted in to workflows) right now. Such a
+            node is kept, not dropped, and reports `unavailable` (or `error`)
+            when run.
 
     ScheduleInput:
       type: object
@@ -741,7 +893,10 @@ components:
         steps:
           type: array
           minItems: 1
-          maxItems: 20
+          description: >-
+            The node tree (see `ScheduleStep`): at most 50 nodes in all.
+            Errors are path-qualified, e.g.
+            `steps[1].do[0].then[0].params.title: is required`.
           items:
             $ref: '#/components/schemas/ScheduleStep'
       example:
@@ -759,6 +914,56 @@ components:
               label: weekly-review
               intent: Ask how the week went
               delay_hours: 11
+
+    SchedulerWorkflowAction:
+      type: object
+      description: An admin action a workflow step may call (opted in with `workflow=True`).
+      required: [id, tool, label, description, method, parameters, destructive]
+      properties:
+        id:
+          type: string
+          example: "tasks.create_task"
+        tool:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        method:
+          type: string
+        parameters:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            description: Same shape as an admin-action parameter, `in` included.
+        destructive:
+          type: boolean
+          description: 'When true, a node needs `allow_destructive: true`.'
+
+    ScheduleDryRun:
+      type: object
+      description: >-
+        What a schedule would do now. `GET` actions run for real (they are
+        reads, so `for`/`if` see real data); every other action and every job
+        is reported `would_run` with its rendered params and not called. Readers
+        of a not-run node are `would_skip`; a once-key already in the ledger is
+        `would_dedupe`. The ledger is never written and nothing is stored in
+        the run history.
+      required: [schedule_id, dry_run, now, steps]
+      properties:
+        schedule_id:
+          type: string
+        dry_run:
+          type: boolean
+          enum: [true]
+        now:
+          type: string
+          format: date-time
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleStepOutcome'
 
     ValidationErrors:
       type: object

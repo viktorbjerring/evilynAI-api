@@ -1,0 +1,38 @@
+post:
+  summary: Dry-run a saved schedule
+  description: |
+    What the schedule would do if it ran now. `GET` admin actions run for real
+    (they are reads, so `for` and `if` see real data); every other action and
+    every job is reported `would_run` with its rendered params and is **not**
+    called. Synchronous; never stored in the run history; never writes the
+    ledger. Independent of any run in flight.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: The dry run
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/ScheduleDryRun'
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: No such schedule.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'

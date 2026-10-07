@@ -1,0 +1,50 @@
+get:
+  summary: List the admin actions a workflow step may call
+  description: |
+    The module admin actions opted in to server-scheduler workflows
+    (`@admin_action(workflow=True)` — an explicit, per-route opt-in; nothing is
+    timer-callable merely for having an admin route), plus the template filters
+    and the timezone templates use. A client builds its action picker and
+    params form from this list.
+
+    Read live from the admin manifest; empty when the server's Flask app is not
+    attached to the scheduler.
+  tags: [debug]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The eligible actions and the filter set
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [actions, filters, timezone]
+            properties:
+              actions:
+                type: array
+                items:
+                  $ref: '../../openapi.yaml#/components/schemas/SchedulerWorkflowAction'
+              filters:
+                type: array
+                items:
+                  type: object
+                  required: [name, description]
+                  properties:
+                    name:
+                      type: string
+                      example: add_days
+                    description:
+                      type: string
+              timezone:
+                type: string
+                description: The zone template dates are read and written in (the toolset-wide timezone).
+                example: Europe/Copenhagen
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

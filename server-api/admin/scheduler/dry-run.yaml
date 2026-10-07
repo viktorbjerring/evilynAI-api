@@ -1,0 +1,44 @@
+post:
+  summary: Dry-run an unsaved schedule body
+  description: |
+    Validates a schedule body exactly as `POST /admin/scheduler/schedules`
+    would — except that `id` is optional (it defaults to `dry-run`, and only
+    matters for the ledger lookup) — and then dry-runs it. The useful one while
+    editing a workflow's JSON. Same execution rules as the saved-schedule dry
+    run: `GET` actions run for real, nothing else is called.
+  tags: [admin]
+  security:
+    - bearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../openapi.yaml#/components/schemas/ScheduleInput'
+  responses:
+    '200':
+      description: The dry run
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/ScheduleDryRun'
+    '400':
+      description: The body is invalid; every problem at once, path-qualified.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [errors]
+            properties:
+              errors:
+                type: array
+                items:
+                  type: string
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: No server scheduler is running on this server.
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

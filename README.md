@@ -13,20 +13,27 @@ This repo contains the OpenAPI and AsyncAPI specifications for the EvilynAI REST
 
 ### REST endpoint groups (`server-api/`)
 
-| Folder         | Endpoints                                                                              |
-| -------------- | -------------------------------------------------------------------------------------- |
-| `auth/`        | Login                                                                                  |
-| `chat/`        | Chat, history                                                                          |
-| `actions/`     | Pending, get, approve, deny                                                            |
-| `tools/`       | List, get, enable/disable, reload, actions, permissions, state                         |
-| `tts/`         | Available, enable, fetch audio                                                         |
-| `stt/`         | Available                                                                              |
-| `stream/`      | SSE stream, device register                                                            |
-| `admin/`       | Dream trigger, transcript rotate                                                       |
-| `debug/`       | Transcript, working-set, dream status, scheduler status, summaries, personality, trait |
-| `health/`      | Health check, logs                                                                     |
-| `google-auth/` | Google OAuth start, callback                                                           |
-| `system/`      | Ping, notificator, message                                                             |
+| Folder           | Endpoints                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `auth/`          | Login                                                                                                                  |
+| `chat/`          | Chat, history, feedback                                                                                                |
+| `attachments/`   | List, get, delete (`{attachment_id}`)                                                                                  |
+| `filmstrips/`    | Listing, vocabulary, per-track (`{track_ref}`: detail, frames, contact, classify, verdict)                             |
+| `birds/`         | Sightings, hours, uploads, detector reports, model reports and uploads                                                 |
+| `actions/`       | Pending, get, approve, deny                                                                                            |
+| `tools/`         | List, descriptions, permissions, admin-actions, enable/disable, logs (`{tool_name}`), and per-tool module routes       |
+| `tts/`           | Available, enable, fetch audio                                                                                         |
+| `stt/`           | Available                                                                                                              |
+| `stream/`        | SSE stream, unsubscribe                                                                                                |
+| `notifications/` | Device register, unregister                                                                                            |
+| `admin/`         | Config, dream and reprocess triggers, transcript rotate, memories, memory saves, personality traits, scheduler         |
+| `debug/`         | Transcript, working-set, personality, memories, memory saves, dream and reprocess status, scheduler, inference         |
+| `health/`        | Health check                                                                                                           |
+
+Per-tool module routes (`/tools/<tool>/module/...`) live under `tools/<tool>/module/`
+for each tool that has a module (for example `birds`, `calendar`, `notebook`,
+`notificator`, `projects`, `restaurants`, `schedule`, `tasks`, `vision`,
+`web_fetch`, `wordle`, `ask-the-oracle`); the folder tree is the authority.
 
 ## Tool schemas (`tool-details/`)
 
@@ -46,6 +53,7 @@ supersedes what used to be hand-maintained here as `user_actions`.)
 | `tasks-tool.yaml`          | `tasks`             |
 | `ask-the-oracle-tool.yaml` | `ask_the_oracle`    |
 | `projects-tool.yaml`       | `projects`          |
+| `calendar-tool.yaml`       | `calendar`          |
 
 ## Generating docs
 

@@ -1,0 +1,133 @@
+post:
+  summary: Record an answer to one question
+  description: |
+    Appends one line to the host's append-only `answers.jsonl`; the desktop's
+    `collect` reads it from there. **Nothing is ever rewritten or deleted**: there
+    is no DELETE, a correction is a new answer, and the last answer that applies
+    wins, as on the desktop. On success the reply is the updated event, because
+    one answer can pose or retire other questions.
+
+    **Answers by question** (the package's `options` are authoritative):
+
+    * `same_bird`: `same_bird`, `not_same_bird`, `not_a_bird`, `two_birds`,
+      `duplicate_box`, `cant_tell`.
+    * `still_there`, `still_there_2`: `left`, `continues`, `not_boxed_again`,
+      `cant_tell`.
+
+    **`not_same_bird`** needs `switch_record_id` (a record of the questioned
+    piece, not its first) and `head` (what the part before the switch was:
+    `bird`, `not_a_bird`, `two_birds`, `duplicate_box`, `cant_tell`). The part
+    from the switch on is posed as its own question 1.
+
+    **`continues`** needs `target_record_id`: a record of the event's window at a
+    strictly later position than the piece's last record (a box in the piece's
+    own last frame is refused), in some segment, and not in the part this same
+    piece's own switch created.
+
+    Fields that do not apply must be **null**. Unknown body keys are refused.
+    Nothing is pre-selected on the server's side and the host does not judge
+    whether two exits land on the same piece; the desktop's derivation does.
+
+    **Retries.** Send an `answer_id` to make a retry idempotent: a repeat is not
+    appended again and the reply is the current event. `decided_by` defaults to
+    the server's configured author and `client` to `evilyn-server/<version>`.
+
+    **Errors.** 400 `{"errors": [...]}` lists every problem at once. 404 is an
+    unknown event or a reference that is not one of ours. 409 means the question
+    is no longer posed (another answer superseded it): reload the event.
+  tags: [track-questions]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: event_id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20261027T072402Z-0741"
+    - name: ref
+      in: path
+      required: true
+      schema:
+        type: string
+      description: A `ref` from the event's `questions`.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [answer]
+          additionalProperties: false
+          properties:
+            answer:
+              type: string
+              example: "not_same_bird"
+            switch_record_id:
+              type: string
+              nullable: true
+              description: '`not_same_bird` only; else null.'
+              example: "r0123"
+            head:
+              type: string
+              nullable: true
+              description: '`not_same_bird` only; else null.'
+              example: "bird"
+            target_record_id:
+              type: string
+              nullable: true
+              description: '`continues` only; else null.'
+            answer_id:
+              type: string
+              description: 1-128 characters of `A-Za-z0-9_-`. Makes a retry idempotent.
+            decided_by:
+              type: string
+              description: Defaults to the server's configured author.
+            client:
+              type: string
+              description: Defaults to `evilyn-server/<version>`.
+  responses:
+    '200':
+      description: Recorded (or an idempotent repeat). The updated event.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/TrackQuestionEvent'
+    '400':
+      description: Every problem with the answer, at once
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [errors]
+            properties:
+              errors:
+                type: array
+                items:
+                  type: string
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: Unknown event, or a reference that is not one of ours
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '409':
+      description: The question is no longer posed; reload the event
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '500':
+      description: The answer could not be written
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Track questions are not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'

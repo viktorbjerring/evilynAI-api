@@ -1,0 +1,55 @@
+get:
+  summary: One question in full
+  description: |
+    The one question being asked: its `record_ids` (the box being questioned, as
+    keys into the event's `boxes`), the clips it spans, and where to play.
+
+    * **`same_bird`** (question 1): is the box on `record_ids` one bird
+      throughout? Play starts `lead_frames` before the first record.
+    * **`still_there`** (question 2): after the last frame of this piece, did the
+      bird leave, continue as another box, drop out of detection, or can't you
+      tell? Play starts `lead_frames` before the **last** record.
+    * **`still_there_2`**: the same, for the second bird of a `two_birds` piece.
+
+    `start_clip` is that anchor minus `lead_frames`, clamped to `play_start`;
+    `end_clip` is `play_end`.
+
+    404 when the question is not currently posed — for example a remainder whose
+    parent was re-answered. Reload the event.
+  tags: [track-questions]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: event_id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20261027T072402Z-0741"
+    - name: ref
+      in: path
+      required: true
+      schema:
+        type: string
+      description: A `ref` from the event's `questions`.
+  responses:
+    '200':
+      description: The question
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/TrackQuestion'
+    '401':
+      $ref: '../../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: Unknown event, or the question is not currently posed
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Track questions are not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../openapi.yaml#/components/schemas/Error'

@@ -1,0 +1,67 @@
+get:
+  summary: One published frame's pixels
+  description: |
+    A JPEG, about 960 px wide, exactly as the desktop published it. The file name
+    is resolved **only through the event's `package.json`**: a name the package
+    does not declare, or a file whose size no longer matches the declaration, is
+    a 404.
+
+    Requires auth like every other route here — the frames are private data, and
+    the producer's person filter is on the detector's word, not the pixels. Fetch
+    with the bearer token, never `?token=`.
+
+    **Not immutable-cacheable**, unlike `/filmstrips` frames: a republish may
+    replace a file under the same name. The response carries an `ETag` that
+    changes with every publish, so a client revalidates (`If-None-Match` gets a
+    304) instead of guessing.
+  tags: [track-questions]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: event_id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20261027T072402Z-0741"
+    - name: file
+      in: path
+      required: true
+      schema:
+        type: string
+      description: A `file` value from the event's `frames`.
+      example: "000123.jpg"
+  responses:
+    '200':
+      description: The frame
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          example: "private, no-cache"
+        ETag:
+          schema:
+            type: string
+      content:
+        image/jpeg:
+          schema:
+            type: string
+            format: binary
+    '304':
+      description: Unchanged since the `If-None-Match` ETag
+    '401':
+      $ref: '../../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: >
+        Unknown event, an incomplete package, a file name the package does not
+        declare, or a file missing or changed since it was declared.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Track questions are not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../../openapi.yaml#/components/schemas/Error'

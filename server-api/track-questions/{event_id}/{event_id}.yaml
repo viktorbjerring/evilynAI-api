@@ -1,0 +1,50 @@
+get:
+  summary: One published event, with its frames, boxes and question list
+  description: |
+    Everything needed to play the event and to know what is being asked: the
+    frames (each with a server-given `url`), every box, and the questions
+    currently posed in desktop order.
+
+    **Boxes are blind** (D-045). A box is a record id and coordinates; there is
+    no track id, class, species, confidence or tracker continuation hint
+    anywhere, and nothing here may be used to pre-select an answer.
+
+    **Scale boxes by `frame_size`, never by the image size.** `frame_size` is
+    the coordinate space of the boxes; `image_size` is the JPEG.
+
+    The question list carries **no question's records or span**. Fetch one
+    question at a time from `/track-questions/{event_id}/questions/{ref}`. After
+    an answer the list may grow (a split poses the part after the switch, an exit
+    question appears for a bird-like piece) or shrink (a re-answered question
+    supersedes its remainder), so re-read it.
+  tags: [track-questions]
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: event_id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "cam0-20261027T072402Z-0741"
+  responses:
+    '200':
+      description: The event
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/TrackQuestionEvent'
+    '401':
+      $ref: '../../openapi.yaml#/components/responses/Unauthorized'
+    '404':
+      description: Unknown event, or its package is not complete
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'
+    '503':
+      description: Track questions are not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../../openapi.yaml#/components/schemas/Error'

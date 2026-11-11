@@ -1,0 +1,52 @@
+get:
+  summary: List published events with track questions
+  description: |
+    Events whose desktop-published package is complete, oldest id first, each
+    with the counts of questions currently posed.
+
+    The desktop labelling tool (`tools/track_truth`) publishes one **package** of
+    frames and boxes per event; Viktor answers the same questions as the desktop
+    tool ("same bird?", "still there?", "two birds") from a phone browser. The
+    host poses the follow-up questions itself, so the counts move as answers
+    arrive. See `doc/track-question-contract.md`.
+
+    A package lists only when `package.json` parses with schema 1 **and** every
+    frame it names exists with the declared size. A half-synced package is
+    skipped, not reported broken, because it isn't.
+
+    `available` distinguishes "nothing published" from "no `packages/` directory
+    on this server at all" — two states that otherwise both render as an empty
+    list.
+
+    **Nothing here involves the AI**, and the frames are private data, so this
+    route and every other under `/track-questions` requires auth.
+  tags: [track-questions]
+  security:
+    - bearerAuth: []
+  responses:
+    '200':
+      description: The events
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [events, available]
+            properties:
+              events:
+                type: array
+                items:
+                  $ref: '../openapi.yaml#/components/schemas/TrackQuestionEventSummary'
+              available:
+                type: boolean
+                description: >
+                  Whether `track-questions/packages/` exists on this server.
+                  False means nothing has been set up here, not that there is
+                  nothing to label.
+    '401':
+      $ref: '../openapi.yaml#/components/responses/Unauthorized'
+    '503':
+      description: Track questions are not configured on this server
+      content:
+        application/json:
+          schema:
+            $ref: '../openapi.yaml#/components/schemas/Error'

@@ -1295,6 +1295,180 @@ components:
           type: string
           nullable: true
 
+    TrackQuestionEventSummary:
+      type: object
+      description: >-
+        One published event in the track-question listing, with the counts of
+        questions currently posed. Pending and answered move as answers arrive,
+        because the host poses follow-up questions itself.
+      required: [event_id, published_utc, questions, pending, answered, frames]
+      properties:
+        event_id:
+          type: string
+          example: "cam0-20261027T072402Z-0741"
+        published_utc:
+          type: string
+          description: When the desktop published this package (ISO-8601 Z).
+        questions:
+          type: integer
+          description: Questions currently posed (`pending` + `answered`).
+        pending:
+          type: integer
+        answered:
+          type: integer
+        frames:
+          type: integer
+          description: Frames in the package.
+
+    TrackQuestionRow:
+      type: object
+      description: >-
+        One posed question in the list. It carries no records and no span: those
+        come from the question route, one question at a time.
+      required: [ref, question, status, answer, head]
+      properties:
+        ref:
+          type: string
+          description: >-
+            Opaque, URL-safe reference for the question. Never construct or
+            parse one; take it from the payload.
+        question:
+          type: string
+          enum: [same_bird, still_there, still_there_2]
+          description: >-
+            `same_bird` is question 1 (is this one bird, throughout?).
+            `still_there` is question 2 (what became of the bird after the last
+            frame of this piece?). `still_there_2` is the same for the second
+            bird of a `two_birds` piece.
+        status:
+          type: string
+          enum: [pending, answered]
+        answer:
+          type: string
+          nullable: true
+          description: The answer currently in effect, or null while pending.
+        head:
+          type: string
+          nullable: true
+          description: >-
+            For an answered `not_same_bird`, what the part before the switch
+            was; otherwise null.
+
+    TrackQuestion:
+      allOf:
+        - $ref: '#/components/schemas/TrackQuestionRow'
+        - type: object
+          required: [record_ids, first_clip, last_clip, start_clip, end_clip]
+          properties:
+            record_ids:
+              type: array
+              items:
+                type: string
+              description: >-
+                The records this question is about, in time order, as keys into
+                the event's `boxes`. The questioned box is the one with these
+                ids; every other box is context.
+            first_clip:
+              type: integer
+              description: Clip index of the first record.
+            last_clip:
+              type: integer
+              description: Clip index of the last record.
+            start_clip:
+              type: integer
+              description: >-
+                Where to start playing: the anchor minus `lead_frames`, clamped
+                to the event's `play_start`. The anchor is the first record for
+                `same_bird` and the last record for the exit questions.
+            end_clip:
+              type: integer
+              description: Where to stop playing (the event's `play_end`).
+
+    TrackQuestionEvent:
+      type: object
+      description: >-
+        One published event: every frame to play, every box, and the question
+        list. Boxes carry a record id and coordinates and nothing else (D-045):
+        no track id, class, species or tracker opinion, because a human who is
+        shown the tracker's view confirms it.
+      required:
+        [event_id, published_utc, frame_size, image_size, play_start, play_end,
+         frames, boxes, questions]
+      properties:
+        event_id:
+          type: string
+        published_utc:
+          type: string
+        frame_size:
+          type: array
+          items:
+            type: integer
+          minItems: 2
+          maxItems: 2
+          description: >-
+            `[width, height]` the box coordinates are in. **Scale boxes by this,
+            never by the image size.**
+          example: [1920, 1080]
+        image_size:
+          type: array
+          items:
+            type: integer
+          minItems: 2
+          maxItems: 2
+          description: '`[width, height]` of the JPEG frames.'
+          example: [960, 540]
+        play_start:
+          type: integer
+          description: First published clip index.
+        play_end:
+          type: integer
+          description: Last published clip index.
+        frames:
+          type: array
+          description: One per published frame, in clip order.
+          items:
+            type: object
+            required: [clip_index, file, bytes, url]
+            properties:
+              clip_index:
+                type: integer
+              file:
+                type: string
+                example: "000123.jpg"
+              bytes:
+                type: integer
+              url:
+                type: string
+                description: >-
+                  Server-given path of the frame's pixels. Fetch it with the
+                  bearer token, never with `?token=`.
+                example: "/track-questions/cam0-20261027T072402Z-0741/frames/000123.jpg"
+        boxes:
+          type: object
+          description: >-
+            Clip index (as a string) to the boxes in that frame: every record of
+            the event inside the published span.
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              required: [record_id, box]
+              properties:
+                record_id:
+                  type: string
+                box:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 4
+                  maxItems: 4
+                  description: '`[x1, y1, x2, y2]` in `frame_size` coordinates.'
+        questions:
+          type: array
+          description: Questions currently posed, in desktop order.
+          items:
+            $ref: '#/components/schemas/TrackQuestionRow'
+
   responses:
     Unauthorized:
       description: Missing or invalid JWT token
